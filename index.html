@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能词汇解析 v10</title>
+    <title>AI 智能词汇解析 v10.1</title>
     <style>
         /* ======== 亮色主题 (Apple-inspired) ======== */
         :root {
@@ -1561,7 +1561,7 @@
         .section-kicker { color: var(--accent); }
         .search-intro h2, .result-heading h2 { margin: 7px 0 0; font-size: 29px; line-height: 1.2; letter-spacing: -.055em; color: var(--text-main); }
         .search-intro > p { color: var(--text-muted); margin: 0 0 3px; font-size: 16px; font-weight: 500; }
-        .input-group { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; margin: 0; }
+        .input-group { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: end; gap: 10px; margin: 0; }
         .input-label { grid-column: 1 / -1; font-size: 15px; font-weight: 600; color: var(--text-muted); min-width: 0; margin-bottom: -4px; }
         .search-field { display: flex; align-items: center; min-width: 0; border: 1.5px solid var(--border-color); background: var(--input-bg); border-radius: 15px; transition: border-color var(--motion-base), box-shadow var(--motion-base); }
         .search-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -1572,6 +1572,11 @@
         button.action-btn { min-height: 58px; padding: 0 23px; border-radius: 15px; background: #2f64dc; box-shadow: 0 9px 18px rgba(39, 95, 216, .21); font-family: var(--ui-font); font-size: 16px; font-weight: 700; }
         button.action-btn:hover { background: #2857c7; box-shadow: 0 13px 25px rgba(39, 95, 216, .24); filter: none; }
         button.action-btn span { margin-left: 12px; font-size: 18px; font-weight: 400; }
+        .paste-search-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 58px; padding: 0 17px; border: 1.5px solid var(--accent); border-radius: 15px; background: var(--accent-soft); color: var(--accent); font: 700 15px/1.2 var(--ui-font); white-space: nowrap; cursor: pointer; transition: background var(--motion-base), transform var(--motion-base); }
+        .paste-search-btn:hover { background: var(--clickable-hover-bg); transform: translateY(-2px); }
+        .paste-search-btn:active { transform: scale(.98); }
+        .paste-search-btn:disabled { opacity: .55; cursor: wait; transform: none; }
+        .paste-search-btn svg { width: 19px; height: 19px; flex: none; }
         .search-footer { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 13px; font-weight: 500; margin: 12px 2px 22px; }
         .api-settings { border-top: 1px solid var(--border-color); }
         .api-toggle-bar { margin: 0; padding: 17px 2px 2px; font-size: 14px; font-weight: 600; color: var(--text-muted); gap: 10px; }
@@ -1710,6 +1715,7 @@
             .input-label { grid-column: 1; margin-bottom: 0; }
             .search-field { width: 100%; }
             button.action-btn { width: 100%; }
+            .paste-search-btn { width: 100%; }
             .search-footer { gap: 8px; flex-wrap: wrap; }
             .api-toggle-hint { display: none; }
             .api-row .btn-sm { width: 100%; }
@@ -1775,7 +1781,7 @@
         </span>
         <div class="brand-copy">
             <h1>多彩词汇</h1>
-            <span>Lexicon Studio <i>·</i> 10</span>
+            <span>Lexicon Studio <i>·</i> 10.1</span>
         </div>
     </div>
     <div class="nav-actions">
@@ -1819,6 +1825,10 @@
                 <span class="search-field-icon" aria-hidden="true">⌕</span>
                 <input type="text" id="wordInput" placeholder="试试 serendipity，或输入一句中文..." maxlength="200" onkeydown="handleKeyDown(event)" autocomplete="off">
             </div>
+            <button class="paste-search-btn" id="pasteSearchBtn" type="button" onclick="pasteAndSearch()" aria-label="粘贴剪贴板内容并查询" title="粘贴剪贴板内容并查询">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5V3.4c0-.8.7-1.4 1.5-1.4h3c.8 0 1.5.6 1.5 1.4v1.1M9 10h6m-6 4h6"/></svg>
+                <span>粘贴并查询</span>
+            </button>
             <button class="action-btn" id="searchBtn" onclick="manualSearch()">生成解析 <span aria-hidden="true">↗</span></button>
         </div>
         <div class="search-footer"><span>支持英文词汇、短语与中文表达</span><span>按 Enter 快速查询</span></div>
@@ -2133,6 +2143,35 @@
         saveNavStack();
         updateNavButtons();
         analyzeWord();
+    }
+
+    async function pasteAndSearch() {
+        const button = document.getElementById('pasteSearchBtn');
+        if (button.disabled) return;
+        if (!navigator.clipboard?.readText) {
+            showStatus('当前环境无法读取剪贴板，请长按输入框选择“粘贴”', 'error');
+            return;
+        }
+        button.disabled = true;
+        try {
+            // 在点击事件中立即调用，保留 iPad Safari 所需的用户手势。
+            const pasted = (await navigator.clipboard.readText()).trim();
+            if (!pasted) {
+                showStatus('剪贴板中没有文字，请先复制单词或短语', 'error');
+                return;
+            }
+            const validation = validateInput(pasted);
+            if (!validation.valid) {
+                showStatus(`剪贴板内容无法查询：${validation.error}`, 'error');
+                return;
+            }
+            document.getElementById('wordInput').value = pasted;
+            manualSearch();
+        } catch (error) {
+            showStatus('未能读取剪贴板。请在 Safari 的提示中点“粘贴”，或长按输入框手动粘贴', 'error');
+        } finally {
+            button.disabled = false;
+        }
     }
 
     function handleKeyDown(e) {

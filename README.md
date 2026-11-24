@@ -1,6 +1,6 @@
 # Lexicon Studio
 
-多彩词汇解析 v10 的 GitHub Pages 上线文件夹。网站入口是仓库根目录的 `index.html`；本文件夹只保留这一个 HTML 文件。
+多彩词汇解析 v10.1 的 GitHub Pages 上线文件夹。网站入口是仓库根目录的 `index.html`；本文件夹只保留这一个 HTML 文件。
 
 ## 部署到 GitHub Pages
 
@@ -9,6 +9,10 @@
 3. 等待 GitHub Pages 发布，打开它给出的站点地址。
 
 页面的 CSS、JavaScript 和图标都内嵌在 `index.html`，不需要构建步骤或安装依赖。
+
+## v10.1 使用说明
+
+在 iPad Safari 中复制单词或短语，切回网站并点「粘贴并查询」。Safari 可能显示系统粘贴提示；选择「粘贴」后，页面会自动填入并查询。若取消粘贴、剪贴板为空或浏览器不支持读取，原输入保持不变，也可以长按输入框手动粘贴。
 
 ## API 使用说明
 
