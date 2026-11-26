@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能词汇解析 v10.2</title>
+    <title>AI 智能词汇解析 v10.3</title>
     <style>
         /* ======== 亮色主题 (Apple-inspired) ======== */
         :root {
@@ -1504,6 +1504,17 @@
         .reading-size-button:hover:not(:disabled), .reading-size-button:focus-visible { color: var(--accent); background: var(--accent-soft); }
         .reading-size-button:disabled { opacity: .35; cursor: default; }
         .reading-size-value { min-width: 42px; color: var(--text-muted); text-align: center; font: 700 12px/1 var(--ui-font); }
+        .account-panel { position: fixed; z-index: 1100; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(13, 24, 48, .5); backdrop-filter: blur(12px); }
+        .account-panel.open { display: flex; }
+        .account-card { width: min(100%, 430px); padding: 30px; border-radius: 24px; background: var(--bg-color); color: var(--text-main); box-shadow: var(--shadow-xl); font: 500 15px/1.5 var(--ui-font); }
+        .account-card h2 { margin: 0 0 6px; font-size: 25px; }
+        .account-card p { color: var(--text-muted); margin: 0 0 20px; }
+        .account-card label { display: block; margin: 13px 0 5px; font-weight: 700; }
+        .account-card input { width: 100%; min-height: 46px; border: 1px solid var(--border-color); border-radius: 11px; padding: 10px 12px; background: var(--input-bg); color: var(--text-main); font: inherit; }
+        .account-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+        .account-actions button { flex: 1; min-height: 43px; }
+        #accountMessage { min-height: 22px; margin-top: 12px; color: var(--text-muted); font-size: 13px; overflow-wrap: anywhere; }
+        #accountMessage.error { color: #d84a54; }
 
         .hero {
             position: relative; overflow: hidden; min-height: 370px;
@@ -1797,6 +1808,8 @@
             #resultContent > ol > li::before { left: 14px; top: 17px; width: 32px; height: 32px; font-size: 12px; }
         }
         @media (max-width: 420px) {
+            .top-nav { flex-wrap: wrap; }
+            .nav-actions { width: 100%; justify-content: flex-end; }
             .header { gap: 8px; }
             .brand-copy > span, .reading-size-value { display: none; }
             .reading-size-button { width: 29px; }
@@ -1843,10 +1856,11 @@
         </span>
         <div class="brand-copy">
             <h1>多彩词汇</h1>
-            <span>Lexicon Studio <i>·</i> 10.2</span>
+            <span>Lexicon Studio <i>·</i> 10.3</span>
         </div>
     </div>
     <div class="nav-actions">
+        <button class="btn-secondary" id="accountButton" type="button" aria-label="账号与同步"><span class="nav-icon" aria-hidden="true">☁</span> <span class="account-button-label">登录同步</span></button>
         <button class="btn-secondary" onclick="openVocabBook()" aria-label="打开生词本">
             <span class="nav-icon" aria-hidden="true">▤</span> 我的词库
         </button>
@@ -1907,7 +1921,7 @@
                     <input type="password" id="apiKey" placeholder="输入 DeepSeek API Key (sk-...)" maxlength="128" aria-label="API密钥输入框">
                     <button class="action-btn btn-sm" id="saveKeyBtn" onclick="saveApiKey()">保存</button>
                 </div>
-                <div class="security-note">密钥仅保留在当前标签会话；词库和收藏保存在本机浏览器</div>
+                <div class="security-note">密钥仅保留在当前标签会话；登录后词库和收藏可同步，未登录时仍保存在本机</div>
             </div>
         </div>
     </section>
@@ -1934,6 +1948,26 @@
             <button class="btn-secondary" id="favoriteBtn" onclick="toggleCurrentFavorite()" aria-pressed="false" style="display:none;">☆ 收藏</button>
         </div>
         <div id="resultContent"></div>
+    </div>
+</div>
+
+<div class="account-panel" id="accountPanel" aria-hidden="true">
+    <div class="account-card" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+        <h2 id="accountTitle">账号与同步</h2>
+        <p id="accountDescription">登录后同步查词记录、解析结果、收藏和复习进度。</p>
+        <form id="accountForm">
+            <label for="accountEmail">邮箱</label><input id="accountEmail" type="email" autocomplete="email" required>
+            <label for="accountPassword">密码</label><input id="accountPassword" type="password" autocomplete="current-password" minlength="6" required>
+            <div class="account-actions">
+                <button class="btn-secondary" id="accountLogin" type="submit">登录</button>
+                <button class="btn-secondary" id="accountRegister" type="button">注册</button>
+            </div>
+        </form>
+        <div class="account-actions">
+            <button class="btn-secondary" id="accountLogout" type="button" hidden>退出登录</button>
+            <button class="btn-secondary" id="accountClose" type="button">关闭</button>
+        </div>
+        <div id="accountMessage" role="status" aria-live="polite"></div>
     </div>
 </div>
 
@@ -2999,6 +3033,7 @@
                 cacheSaved = false;
             }
             if (cacheSaved) evictOldCache();
+            window.lexiconCloud?.saveQuery(word, record);
         }
 
         addHistorySilent(word);
@@ -3013,6 +3048,7 @@
         }
         saveHistory();
         renderHistory();
+        window.lexiconCloud?.addHistory(word);
     }
 
     function evictOldCache() {
@@ -3035,6 +3071,7 @@
     }
 
     function clearQueryCache() {
+        window.lexiconCloud?.clearQueriesAndHistory();
         cancelActiveRequest();
         // 清除所有单词查询缓存
         for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -3110,6 +3147,7 @@
         searchHistory = [];
         saveHistory();
         renderHistory();
+        window.lexiconCloud?.clearHistory();
     }
 
     // ======== 结果区单词点击查询 ========
@@ -3392,6 +3430,7 @@
         if (hasFavorite(word)) delete favoriteEntries[word];
         else favoriteEntries[word] = { added_at: Date.now(), due_at: Date.now(), level: 0 };
         saveFavorites();
+        window.lexiconCloud?.saveFavorite(word, favoriteEntries[word] || null);
         updateFavoriteButton();
         if (document.getElementById('vocabModal').classList.contains('show')) refreshVocabGrid();
     }
@@ -3412,6 +3451,7 @@
             entry.due_at = Date.now() + 10 * 60000;
         }
         saveFavorites();
+        window.lexiconCloud?.saveFavorite(word, entry);
         refreshVocabGrid();
     }
 
@@ -3548,6 +3588,7 @@
 
     function deleteCachedWord(word) {
         deleteCachedRecord(word);
+        window.lexiconCloud?.deleteQuery(word);
         searchHistory = searchHistory.filter(item => item !== word);
         saveHistory();
         renderHistory();
@@ -3615,12 +3656,6 @@
         const resultDiv = document.getElementById('result');
         const resultContent = document.getElementById('resultContent');
 
-        if (!apiKey) {
-            showStatus('请先展开“连接 DeepSeek”并保存 API 密钥', 'error');
-            if (!document.getElementById('apiKeySection').classList.contains('expanded')) expandApiSection();
-            shakeElement(document.getElementById('apiKey'));
-            return;
-        }
         const validation = validateInput(rawWord);
         if (!validation.valid) {
             showStatus(validation.error, 'error');
@@ -3645,6 +3680,13 @@
             updateFavoriteButton();
             showStatus('已从本地缓存打开', 'success');
             setTimeout(() => { if (requestId === requestGeneration) hideStatus(); }, 1500);
+            return;
+        }
+
+        if (!apiKey) {
+            showStatus('此词还没有解析缓存，请先展开“连接 DeepSeek”并保存 API 密钥', 'error');
+            if (!document.getElementById('apiKeySection').classList.contains('expanded')) expandApiSection();
+            shakeElement(document.getElementById('apiKey'));
             return;
         }
 
@@ -4541,6 +4583,247 @@
         } else {
             sidebar.classList.remove('visible');
             toggle.classList.add('visible');
+        }
+    });
+</script>
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
+    import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, addDoc, deleteDoc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+        apiKey: 'AIzaSyCwnIOgEkgavgJ8QYuZB2gzoRwtqEzK2TU',
+        authDomain: 'lexicon-studio.firebaseapp.com',
+        projectId: 'lexicon-studio',
+        storageBucket: 'lexicon-studio.firebasestorage.app',
+        messagingSenderId: '540845354358',
+        appId: '1:540845354358:web:472e4f0479a70f4c5f1e57'
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    let db;
+    try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+    catch { db = getFirestore(app); }
+    const panel = document.getElementById('accountPanel');
+    const accountMessage = document.getElementById('accountMessage');
+    const accountButton = document.getElementById('accountButton');
+    const form = document.getElementById('accountForm');
+    let activeUser = null;
+    let ready = false;
+    let unsubscribers = [];
+    let pending = [];
+    let inFlight = 0;
+    const migrationKey = uid => `lexicon_cloud_migrated_v1_${uid}`;
+    const ownerKey = 'lexicon_cloud_local_owner_v1';
+    const path = (uid, group) => collection(db, 'users', uid, group);
+    const recordId = word => btoa(String.fromCharCode(...new TextEncoder().encode(word.toLowerCase().trim())))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    const message = (value, error = false) => {
+        accountMessage.textContent = value;
+        accountMessage.classList.toggle('error', error);
+    };
+    const showPanel = open => {
+        panel.classList.toggle('open', open);
+        panel.setAttribute('aria-hidden', String(!open));
+        if (open && !activeUser) document.getElementById('accountEmail').focus();
+    };
+    accountButton.addEventListener('click', () => showPanel(true));
+    document.getElementById('accountClose').addEventListener('click', () => showPanel(false));
+    panel.addEventListener('click', event => { if (event.target === panel) showPanel(false); });
+    panel.addEventListener('keydown', event => { if (event.key === 'Escape') showPanel(false); });
+
+    async function write(action) {
+        if (!activeUser || !ready) { pending.push(action); return; }
+        inFlight++;
+        try { await action(activeUser.uid); message(`已登录 ${activeUser.email} · 同步完成`); }
+        catch (error) { pending.push(action); message(`同步暂未完成：${error.message}`, true); }
+        finally { inFlight--; }
+    }
+    async function flushPending() {
+        const actions = pending.splice(0);
+        for (const action of actions) await write(action);
+    }
+    window.addEventListener('online', () => { if (ready) void flushPending(); });
+    window.lexiconCloud = {
+        saveQuery(word, record) {
+            if (!record?.content || new TextEncoder().encode(record.content).length > 900000) return;
+            void write(uid => setDoc(doc(path(uid, 'queries'), recordId(word)),
+                { word, record, deleted: false, updatedAt: Date.now() }));
+        },
+        addHistory(word) {
+            void write(uid => addDoc(path(uid, 'history'), { word, at: Date.now() }));
+        },
+        saveFavorite(word, entry) {
+            void write(uid => setDoc(doc(path(uid, 'favorites'), recordId(word)),
+                { word, entry: entry || null, deleted: !entry, updatedAt: Date.now() }));
+        },
+        deleteQuery(word) {
+            void write(uid => setDoc(doc(path(uid, 'queries'), recordId(word)),
+                { word, deleted: true, updatedAt: Date.now() }));
+        },
+        clearHistory() { void write(uid => removeAll(uid, 'history')); },
+        clearQueriesAndHistory() {
+            void write(async uid => {
+                const queries = await getDocs(path(uid, 'queries'));
+                await Promise.all(queries.docs.map(item => setDoc(item.ref,
+                    { word: item.data().word, deleted: true, updatedAt: Date.now() })));
+                await removeAll(uid, 'history');
+            });
+        }
+    };
+    async function removeAll(uid, group) {
+        const items = await getDocs(path(uid, group));
+        await Promise.all(items.docs.map(item => deleteDoc(item.ref)));
+    }
+
+    async function migrateLocal(uid) {
+        if (localStorage.getItem(migrationKey(uid))) return;
+        const [queries, favorites, history] = await Promise.all([
+            getDocs(path(uid, 'queries')), getDocs(path(uid, 'favorites')), getDocs(path(uid, 'history'))
+        ]);
+        const remoteQueries = new Set(queries.docs.map(item => item.id));
+        const remoteFavorites = new Set(favorites.docs.map(item => item.id));
+        const remoteHistory = new Set(history.docs.map(item => item.data().word));
+        const writes = [];
+        for (const word of getAllCachedWords()) {
+            const id = recordId(word);
+            if (remoteQueries.has(id)) continue;
+            const cached = getCachedResult(word)?.record;
+            if (cached?.content && new TextEncoder().encode(cached.content).length <= 900000) {
+                writes.push(setDoc(doc(path(uid, 'queries'), id),
+                    { word, record: cached, deleted: false, updatedAt: cached.saved_at || Date.now() }));
+            }
+        }
+        for (const [word, entry] of Object.entries(favoriteEntries)) {
+            const id = recordId(word);
+            if (!remoteFavorites.has(id)) writes.push(setDoc(doc(path(uid, 'favorites'), id),
+                { word, entry, deleted: false, updatedAt: entry.added_at || Date.now() }));
+        }
+        for (const [index, word] of searchHistory.entries()) {
+            if (!remoteHistory.has(word)) writes.push(addDoc(path(uid, 'history'),
+                { word, at: Date.now() - index * 1000 }));
+        }
+        await Promise.all(writes);
+        localStorage.setItem(migrationKey(uid), '1');
+    }
+
+    function watchCloud(uid) {
+        const onError = error => message(`读取同步数据失败：${error.message}`, true);
+        unsubscribers = [
+            onSnapshot(path(uid, 'favorites'), snapshot => {
+                const next = Object.create(null);
+                for (const item of snapshot.docs) {
+                    const { word, entry, deleted } = item.data();
+                    if (!deleted && word && entry) next[word] = entry;
+                }
+                favoriteEntries = next;
+                saveFavorites();
+                updateFavoriteButton();
+                if (document.getElementById('vocabModal').classList.contains('show')) refreshVocabGrid();
+            }, onError),
+            onSnapshot(path(uid, 'history'), snapshot => {
+                searchHistory = snapshot.docs.map(item => item.data())
+                    .filter(item => typeof item.word === 'string' && Number.isFinite(item.at))
+                    .sort((a, b) => b.at - a.at).map(item => item.word)
+                    .filter((word, index, array) => array.indexOf(word) === index)
+                    .slice(0, MAX_HISTORY_SIZE);
+                saveHistory();
+                renderHistory();
+            }, onError),
+            onSnapshot(path(uid, 'queries'), snapshot => {
+                for (const item of snapshot.docs) {
+                    const { word, record, deleted } = item.data();
+                    if (!word) continue;
+                    if (deleted) deleteCachedRecord(word);
+                    else if (record?.content) {
+                        try { localStorage.setItem(STORAGE_KEYS.MARKDOWN_CACHE_PREFIX + word, JSON.stringify(record)); }
+                        catch { message('云端记录已保存，但本机缓存空间不足', true); }
+                    }
+                }
+                renderHistory();
+                if (document.getElementById('vocabModal').classList.contains('show')) refreshVocabGrid();
+            }, onError)
+        ];
+    }
+
+    function resetLocalAccountData() {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key?.startsWith(STORAGE_KEYS.MARKDOWN_CACHE_PREFIX) ||
+                key?.startsWith(STORAGE_KEYS.STRUCTURED_CACHE_PREFIX) ||
+                key?.startsWith(STORAGE_KEYS.WORD_CACHE_PREFIX)) localStorage.removeItem(key);
+        }
+        searchHistory = [];
+        saveHistory();
+        renderHistory();
+        favoriteEntries = Object.create(null);
+        saveFavorites();
+        updateFavoriteButton();
+        navStack = [];
+        navIndex = -1;
+        saveNavStack();
+        updateNavButtons();
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('resultContent').replaceChildren();
+        if (document.getElementById('vocabModal').classList.contains('show')) refreshVocabGrid();
+    }
+
+    onAuthStateChanged(auth, async user => {
+        unsubscribers.forEach(stop => stop());
+        unsubscribers = [];
+        const previousUid = activeUser?.uid;
+        const localOwner = localStorage.getItem(ownerKey);
+        activeUser = user;
+        ready = false;
+        document.getElementById('accountLogout').hidden = !user;
+        form.hidden = !!user;
+        accountButton.querySelector('.account-button-label').textContent = user ? '已同步' : '登录同步';
+        if (!user) {
+            if (previousUid || localOwner) resetLocalAccountData();
+            localStorage.removeItem(ownerKey);
+            pending = [];
+            message('未登录；当前数据仅保存在此浏览器');
+            return;
+        }
+        if (localOwner && localOwner !== user.uid) resetLocalAccountData();
+        message('正在合并本机记录并连接云端…');
+        try {
+            const firstMigration = !localStorage.getItem(migrationKey(user.uid));
+            await migrateLocal(user.uid);
+            if (auth.currentUser?.uid !== user.uid) return;
+            watchCloud(user.uid);
+            localStorage.setItem(ownerKey, user.uid);
+            ready = true;
+            if (firstMigration) pending = [];
+            else await flushPending();
+            message(`已登录 ${user.email} · 同步已开启`);
+        } catch (error) { message(`同步初始化失败：${error.message}`, true); }
+    });
+    async function authenticate(create) {
+        const email = document.getElementById('accountEmail').value.trim();
+        const password = document.getElementById('accountPassword').value;
+        if (!email || password.length < 6) { message('请输入邮箱和至少 6 位密码', true); return; }
+        message(create ? '正在注册…' : '正在登录…');
+        try {
+            if (create) await createUserWithEmailAndPassword(auth, email, password);
+            else await signInWithEmailAndPassword(auth, email, password);
+            document.getElementById('accountPassword').value = '';
+        } catch (error) { message(`操作失败：${error.message}`, true); }
+    }
+    form.addEventListener('submit', event => { event.preventDefault(); void authenticate(false); });
+    document.getElementById('accountRegister').addEventListener('click', () => void authenticate(true));
+    document.getElementById('accountLogout').addEventListener('click', async () => {
+        if (inFlight || pending.length) {
+            message('仍有记录待同步，请联网并等待同步完成后再退出', true);
+            return;
+        }
+        ready = false;
+        try {
+            await signOut(auth);
+            message('已退出登录；云端数据仍保留');
+        } catch (error) {
+            ready = true;
+            message(`退出失败：${error.message}`, true);
         }
     });
 </script>
