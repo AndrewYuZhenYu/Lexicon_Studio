@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词表 · 多彩词汇解析</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --surface: #ffffff;
+            --canvas: #f5f5f7;
+            --ink: #1d1d1f;
+            --muted: #6e6e73;
+            --line: rgba(0,0,0,.09);
+            --blue: #007aff;
+            --blue-soft: #e8f2ff;
+            --star: #d28a16;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+        body { background: var(--canvas); color: var(--ink); font-size: 16px; display: flex; flex-direction: column; }
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+        button:focus-visible, input:focus-visible, select:focus-visible, .divider:focus-visible {
+            outline: 3px solid #8eb5ff; outline-offset: 2px;
+        }
+        .modebar { display: flex; align-items: center; gap: 10px; flex: none; height: 54px; padding: 7px 18px; border-bottom: 1px solid var(--line); background: var(--surface); font-size: 14px; }
+        .modebar strong { font-size: 15px; margin-right: auto; }
+        .cloud-status { color: var(--muted); font-size: 12px; white-space: nowrap; }
+        .cloud-status[data-state="synced"] { color: #188462; }
+        .cloud-status[data-state="error"] { color: #bc3946; }
+        .modebar button { border: 1px solid var(--line); background: var(--canvas); color: var(--muted); border-radius: 9px; padding: 8px 11px; font-size: 13px; font-weight: 650; }
+        .modebar button[aria-pressed="true"] { background: var(--blue-soft); color: var(--blue); border-color: transparent; }
+        .workspace { display: grid; grid-template-columns: minmax(240px, var(--left-width, 40%)) 8px minmax(0, 1fr); width: 100%; flex: 1; min-height: 0; overflow: hidden; }
+        .workspace[data-view="list"] { display: block; }
+        .workspace[data-view="dictionary"] { display: block; }
+        .workspace[data-view="list"] .dictionary, .workspace[data-view="list"] .divider,
+        .workspace[data-view="dictionary"] .library, .workspace[data-view="dictionary"] .divider { display: none; }
+        .workspace[data-view="list"] .library, .workspace[data-view="dictionary"] .dictionary { width: 100%; height: 100%; }
+        .library { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--canvas); box-shadow: 2px 0 20px #1f29370a; z-index: 1; }
+        .library-top { padding: 18px 24px 17px; border-bottom: 1px solid var(--line); background: var(--surface); }
+        .header-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .header-collapse { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 10px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+        .library.compact .library-top { padding: 11px 20px; }
+        .library.compact .library-top .eyebrow, .library.compact .library-top .lead,
+        .library.compact .library-top .import-row, .library.compact .library-top .drop-note { display: none; }
+        .library.compact h1 { font-size: 21px; }
+        .eyebrow { margin: 0 0 6px; color: var(--blue); font-size: 13px; font-weight: 750; letter-spacing: .1em; }
+        h1 { margin: 0; font-size: clamp(25px, 2.2vw, 34px); line-height: 1.2; letter-spacing: -.04em; }
+        .lead { margin: 10px 0 21px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+        .import-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .primary-button, .secondary-button { min-height: 43px; border-radius: 11px; padding: 0 15px; font-size: 14px; font-weight: 700; }
+        .primary-button { color: white; background: var(--blue); border: 1px solid var(--blue); box-shadow: 0 4px 12px #007aff25; }
+        .primary-button:hover { background: #1d4ed8; }
+        .secondary-button { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+        .secondary-button:hover { background: #f8fafc; }
+        .secondary-button:disabled { opacity: .42; cursor: default; }
+        .file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        .drop-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+        .library.dragging { outline: 3px dashed var(--blue); outline-offset: -8px; }
+        .controls { padding: 13px 20px 12px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.78); }
+        .controls.compact { padding: 9px 16px; }
+        .controls.compact .management-row, .controls.compact .add-form,
+        .controls.compact .sort-row, .controls.compact .filter-row { display: none; }
+        .management-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+        .management-row button { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 650; }
+        .management-row button:disabled { opacity: .45; cursor: default; }
+        .add-form { display: none; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
+        .add-form.open { display: flex; }
+        .add-form input { min-width: 110px; flex: 1; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; background: var(--surface); color: var(--ink); font-size: 14px; }
+        .add-form button { border: 0; border-radius: 9px; padding: 8px 12px; background: var(--blue); color: white; font-size: 13px; }
+        .list-picker { display: flex; gap: 8px; align-items: center; position: relative; }
+        .list-quick-button { flex: none; height: 42px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 700; white-space: nowrap; }
+        .list-quick-button[aria-expanded="true"] { border-color: var(--blue); color: var(--blue); background: var(--blue-soft); }
+        .list-popover { position: absolute; z-index: 8; top: calc(100% + 7px); right: 0; width: min(420px, 100%); padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 16px 38px #17203430; }
+        .list-popover[hidden] { display: none; }
+        .list-popover label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 700; }
+        .list-popover select { width: 100%; }
+        .list-popover-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .list-popover-actions button { flex: 1; padding: 9px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--canvas); color: var(--ink); font-size: 13px; font-weight: 650; }
+        .list-popover-actions button:disabled { opacity: .45; }
+        .header-count { color: var(--muted); font: 600 12px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; white-space: nowrap; }
+        select { min-width: 0; flex: 1; appearance: none; border: 1px solid var(--line); border-radius: 10px; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 15 15'%3E%3Cpath d='m3 5 4.5 4L12 5' fill='none' stroke='%23667085' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 13px center; padding: 0 36px 0 12px; height: 42px; color: var(--ink); font-size: 14px; }
+        .icon-button { width: 42px; height: 42px; flex: none; border: 1px solid var(--line); background: white; border-radius: 10px; color: var(--muted); font-size: 20px; }
+        .icon-button:hover { color: #bb283a; background: #fff5f6; }
+        .icon-button:disabled { opacity: .4; cursor: default; }
+        .search-input { min-width: 0; flex: 1; height: 43px; border: 1px solid var(--line); border-radius: 10px; background: #f9fafc; padding: 0 13px; color: var(--ink); font-size: 14px; }
+        .search-input::placeholder { color: #98a1b1; }
+        .sort-row { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
+        .sort-row label { color: var(--muted); font-size: 13px; font-weight: 650; white-space: nowrap; }
+        .sort-row select { flex: 1; height: 39px; }
+        .filter-row { display: flex; gap: 7px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+        .filter { border: 0; border-radius: 20px; padding: 7px 12px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 650; }
+        .filter:hover { background: #f1f4f9; }
+        .filter[aria-pressed="true"] { background: var(--blue-soft); color: var(--blue); }
+        .count { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+        .entries { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px 16px 28px; }
+        .workspace[data-view="list"] .entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); align-content: start; gap: 10px; padding: 20px; }
+        .workspace[data-view="list"] .empty { grid-column: 1 / -1; }
+        .empty { padding: 40px 18px; text-align: center; color: var(--muted); line-height: 1.7; font-size: 14px; }
+        .empty strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 18px; }
+        .group-label { color: #8a94a4; font-size: 12px; font-weight: 750; letter-spacing: .05em; padding: 18px 12px 8px; overflow-wrap: anywhere; }
+        .workspace[data-view="list"] .group-label { grid-column: 1 / -1; }
+        .load-more { display: block; width: 100%; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); }
+        .workspace[data-view="list"] .load-more { grid-column: 1 / -1; }
+        .entry { display: flex; align-items: center; gap: 5px; margin: 3px 0; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.78); box-shadow: 0 2px 7px #00000008; }
+        .entry:hover { background: var(--surface); box-shadow: 0 4px 16px #00000012; }
+        .entry.active { background: var(--blue-soft); border-color: #d9e6ff; }
+        .word-button { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; flex: 1; border: 0; background: none; text-align: left; padding: 11px 8px 11px 12px; color: var(--ink); touch-action: pan-y; user-select: text; -webkit-user-select: text; cursor: pointer; }
+        .word-button * { user-select: text; -webkit-user-select: text; }
+        .library.hide-notes .note { display: none; }
+        .library.hide-notes .word-button { padding-block: 8px; }
+        .word-line { display: flex; gap: 8px; align-items: center; width: 100%; }
+        .word { font-family: "Times New Roman", "Noto Serif SC", "Songti SC", serif; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; line-height: 1.35; }
+        .star { color: var(--star); font-size: 17px; }
+        .marked { color: #24916b; font-size: 12px; white-space: nowrap; }
+        .note { margin-top: 3px; color: var(--muted); font-size: 13px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+        .workspace[data-view="list"] .note { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+        .more-button { width: 38px; height: 38px; margin-right: 5px; border: 0; border-radius: 10px; background: transparent; color: #8993a3; font-size: 21px; }
+        .more-button:hover { background: #edf2fc; color: var(--blue); }
+        .divider { background: #e8ebf0; cursor: col-resize; position: relative; }
+        .divider::after { content: ''; display: block; width: 3px; height: 40px; border-radius: 3px; background: #a8b0bc; position: absolute; left: 2.5px; top: calc(50% - 20px); }
+        .dictionary { min-width: 0; min-height: 0; height: 100%; overflow: hidden; background: var(--canvas); }
+        iframe { width: 100%; height: 100%; border: 0; background: var(--canvas); display: block; }
+        .action-menu { position: fixed; z-index: 10; display: none; min-width: 170px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: 0 14px 40px #1f293729; }
+        .action-menu.open { display: block; }
+        .action-menu button { display: block; width: 100%; border: 0; border-radius: 7px; padding: 10px 11px; background: transparent; text-align: left; font-size: 14px; color: var(--ink); }
+        .action-menu button:hover { background: var(--blue-soft); }
+        .edit-dialog { width: min(90vw, 390px); padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--ink); box-shadow: 0 20px 70px #0003; }
+        .edit-dialog::backdrop { background: #10182780; }
+        .edit-dialog h2 { margin: 0 0 16px; font-size: 20px; }
+        .edit-dialog input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--canvas); color: var(--ink); }
+        .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+        .edit-actions button { padding: 9px 15px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); }
+        .edit-actions button[type="submit"] { border-color: var(--blue); background: var(--blue); color: white; }
+        .toast { position: fixed; z-index: 20; left: 50%; bottom: 25px; transform: translateX(-50%); padding: 10px 16px; border-radius: 10px; background: #202b42; color: white; font-size: 14px; box-shadow: 0 8px 24px #17203438; max-width: min(90vw, 500px); text-align: center; display: none; }
+        .toast.visible { display: block; }
+        @media (max-width: 600px) {
+            .modebar { gap: 5px; padding-inline: 8px; }
+            .modebar strong { display: none; }
+            .modebar button { padding: 7px 8px; font-size: 12px; }
+            .cloud-status { margin-right: auto; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+            .workspace { display: flex; flex-direction: column; }
+            .workspace[data-view="list"], .workspace[data-view="dictionary"] { display: block; }
+            .library { flex: none; height: 48dvh; min-height: 0; }
+            .divider { display: none; }
+            .dictionary { flex: 1; height: auto; min-height: 0; }
+            .library-top { padding: 19px 20px 14px; }
+            .controls { padding: 12px 20px; }
+            .lead { margin-bottom: 13px; }
+            .list-picker { gap: 5px; }
+            .list-quick-button { padding-inline: 7px; }
+            .list-picker .icon-button { width: 38px; height: 40px; }
+        }
+        @media (prefers-color-scheme: dark) {
+            :root { color-scheme: dark; --surface: #1c1f27; --canvas: #111318; --ink: #f4f5f7; --muted: #a5adba; --line: #343a46; --blue: #8aaeff; --blue-soft: #283b60; }
+            .library { box-shadow: 2px 0 20px #0003; }
+            .primary-button { background: #466fd0; border-color: #466fd0; color: white; }
+            .primary-button:hover { background: #5c82de; }
+            .secondary-button, .icon-button { background: var(--surface); }
+            .secondary-button:hover, .entry:hover, .filter:hover { background: #252b36; }
+            select { background-color: var(--surface); color: var(--ink); }
+            .search-input { background: #222630; color: var(--ink); }
+            .entry.active { border-color: #355184; }
+            .more-button:hover { background: #303d58; }
+            .divider { background: #30343d; }
+            .action-menu { background: #242933; box-shadow: 0 14px 40px #0008; }
+            .action-menu button:hover { background: var(--blue-soft); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="modebar" aria-label="视图切换">
+        <strong>多彩词汇 · 单词表</strong>
+        <span class="cloud-status" id="cloudStatus" role="status" aria-live="polite">登录后同步词表</span>
+        <button type="button" data-view="list" aria-pressed="false">仅词表</button>
+        <button type="button" data-view="split" aria-pressed="true">双栏</button>
+        <button type="button" data-view="dictionary" aria-pressed="false">仅查词</button>
+    </nav>
+    <main class="workspace" id="workspace" data-view="split">
+        <section class="library" id="library" aria-label="我的单词表">
+            <header class="library-top">
+                <p class="eyebrow">WORDLIST STUDIO</p>
+                <div class="header-line"><h1>我的单词表 <span class="header-count" id="listCount">0 个词条</span></h1><button class="header-collapse" id="headerToggle" type="button" aria-expanded="true">收起导入区</button></div>
+                <p class="lead">导入自己的词表，点一个词，右侧立即打开完整解析。长按词条可收藏或标记。</p>
+                <div class="import-row">
+                    <button class="primary-button" id="importButton" type="button">导入单词表</button>
+                    <button class="secondary-button" id="sampleButton" type="button">查看示例</button>
+                    <button class="secondary-button" id="newListButton" type="button">新建空词表</button>
+                    <input class="file-input" id="fileInput" type="file" accept=".xlsx,.csv,.txt,text/plain,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple aria-label="选择单词表文件">
+                </div>
+                <p class="drop-note">支持 XLSX、CSV、TXT；也可将文件拖到左侧。单文件最多 30 MB、100000 个词条；重复单词只保留一条。</p>
+            </header>
+            <div class="controls">
+                <div class="list-picker">
+                    <input class="search-input" id="filterInput" type="search" placeholder="筛选当前词表…" aria-label="筛选词条">
+                    <button class="list-quick-button" id="listQuickToggle" type="button" aria-label="切换或重命名词表" aria-expanded="false" aria-controls="listPopover">词表 ▾</button>
+                    <button class="icon-button" id="controlsToggle" type="button" title="展开筛选与管理" aria-label="展开筛选与管理" aria-expanded="false">☷</button>
+                    <button class="icon-button" id="noteToggle" type="button" title="隐藏释义" aria-label="隐藏释义" aria-pressed="false">译</button>
+                    <div class="list-popover" id="listPopover" hidden>
+                        <label for="listSelect">切换词表</label>
+                        <select id="listSelect" aria-label="选择单词表"><option value="">尚未导入单词表</option></select>
+                        <div class="list-popover-actions">
+                            <button id="renameListButton" type="button" disabled>重命名词表</button>
+                            <button id="deleteButton" type="button" disabled>删除词表</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="management-row">
+                    <button id="addWordButton" type="button">＋ 添加词条</button>
+                    <button id="exportCsvButton" type="button">导出 CSV</button>
+                    <button id="exportXlsxButton" type="button">导出 XLSX</button>
+                    <button id="backupArchiveButton" type="button">备份全部词表</button>
+                    <button id="restoreArchiveButton" type="button">导入旧存档</button>
+                    <input class="file-input" id="archiveInput" type="file" accept=".json,application/json" aria-label="选择旧词表存档">
+                    <button id="cleanListButton" type="button">清理疑似标题</button>
+                </div>
+                <form class="add-form" id="addForm">
+                    <input id="newWord" name="word" maxlength="200" placeholder="单词或短语" required aria-label="新词条">
+                    <input id="newNote" name="note" maxlength="300" placeholder="释义或备注（可选）" aria-label="词条备注">
+                    <button type="submit">保存词条</button>
+                </form>
+                <div class="sort-row">
+                    <label for="sortSelect">排序</label>
+                    <select id="sortSelect" aria-label="排序方式">
+                        <option value="original">导入顺序</option>
+                        <option value="reverse">导入倒序</option>
+                        <option value="az">词条正序 A–Z</option>
+                        <option value="za">词条倒序 Z–A</option>
+                    </select>
+                </div>
+                <div class="filter-row" role="group" aria-label="词条筛选">
+                    <button class="filter" type="button" data-filter="all" aria-pressed="true">全部</button>
+                    <button class="filter" type="button" data-filter="favorite" aria-pressed="false">已收藏</button>
+                    <button class="filter" type="button" data-filter="marked" aria-pressed="false">已标记</button>
+                    <span class="count" id="count">0 个词条</span>
+                </div>
+            </div>
+            <div class="entries" id="entries" aria-live="polite"></div>
+        </section>
+        <div class="divider" id="divider" role="separator" aria-label="调整左右宽度" aria-orientation="vertical" tabindex="0"></div>
+        <section class="dictionary" aria-label="词汇解析">
+            <iframe id="dictionaryFrame" title="多彩词汇解析 v10.5"></iframe>
+        </section>
+    </main>
+    <div class="action-menu" id="actionMenu" role="menu" aria-label="词条操作">
+        <button type="button" id="menuFavorite" role="menuitem"></button>
+        <button type="button" id="menuMark" role="menuitem"></button>
+        <button type="button" id="menuDelete" role="menuitem">删除词条</button>
+    </div>
+    <dialog class="edit-dialog" id="renameListDialog" aria-labelledby="renameListTitle">
+        <form id="renameListForm">
+            <h2 id="renameListTitle">重命名词表</h2>
+            <input id="renameListInput" maxlength="80" required aria-label="新的词表名称">
+            <div class="edit-actions">
+                <button type="button" id="cancelRenameList">取消</button>
+                <button type="submit">保存</button>
+            </div>
+        </form>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="vendor/fflate.min.js"></script>
+    <script src="wordlist.js"></script>
+    <script src="workspace_sync_core.js"></script>
+    <script>
+    (() => {
+        'use strict';
+        const STORAGE_KEY = 'dictionary_workspace_lists_v1';
+        const DATABASE_NAME = 'dictionary_workspace_archive_v1';
+        const WIDTH_KEY = 'dictionary_workspace_width_v1';
+        const SORT_KEY = 'dictionary_workspace_sort_v1';
+        const VIEW_KEY = 'dictionary_workspace_view_v1';
+        const HEADER_KEY = 'dictionary_workspace_header_v1';
+        const CONTROLS_KEY = 'dictionary_workspace_controls_v1';
+        const NOTES_KEY = 'dictionary_workspace_hide_notes_v1';
+        const FILE_FAVORITES_KEY = 'dictionary_workspace_file_favorites_v1';
+        const CHANNEL = 'dictionary-workspace-v1';
+        const fileMode = location.protocol === 'file:';
+        const $ = id => document.getElementById(id);
+        const state = { lists: [], deleted: { lists: [], entries: [] }, selected: '', filter: 'all', sort: 'original', view: 'split', headerCollapsed: false, controlsCollapsed: false, hideNotes: false, active: '', menuIndex: -1,
+            frameReady: false, pendingQuery: '', fileFavorites: Object.create(null) };
+        let toastTimer, pressTimer, pressStart, suppressClick = false;
+        let archiveDb = null;
+        let archiveKey = 'workspace';
+        let saveQueue = Promise.resolve(true);
+        let visibleRows = [], renderedRows = 0, lastRenderedGroup = null;
+        let loadObserver;
+        const newId = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        function notify(message) {
+            $('toast').textContent = message;
+            $('toast').classList.add('visible');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3200);
+        }
+
+        function currentList() { return state.lists.find(list => list.id === state.selected); }
+        function openArchive() {
+            if (!window.indexedDB) return Promise.resolve(null);
+            return new Promise(resolve => {
+                try {
+                    const request = indexedDB.open(DATABASE_NAME, 1);
+                    request.onupgradeneeded = () => request.result.createObjectStore('snapshots');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => resolve(null);
+                    request.onblocked = () => resolve(null);
+                } catch { resolve(null); }
+            });
+        }
+        function archiveRequest(mode, value, key = archiveKey) {
+            return new Promise((resolve, reject) => {
+                const transaction = archiveDb.transaction('snapshots', mode);
+                const request = mode === 'readonly'
+                    ? transaction.objectStore('snapshots').get(key)
+                    : transaction.objectStore('snapshots').put(value, key);
+                request.onerror = () => reject(request.error);
+                transaction.onerror = () => reject(transaction.error);
+                transaction.onabort = () => reject(transaction.error || new Error('本地事务已中止'));
+                transaction.oncomplete = () => resolve(request.result);
+            });
+        }
+        const storageKey = key => key === 'workspace' ? STORAGE_KEY : `${STORAGE_KEY}_${key}`;
+        async function readArchive(key) {
+            if (archiveDb) {
+                try {
+                    const value = await archiveRequest('readonly', undefined, key);
+                    if (value) return value;
+                } catch { /* Use localStorage fallback. */ }
+            }
+            try { return JSON.parse(localStorage.getItem(storageKey(key)) || '{}'); }
+            catch { return {}; }
+        }
+        function save(touch = true) {
+            const list = currentList();
+            if (list && touch) list.updatedAt = Date.now();
+            const snapshot = { schemaVersion: 1, lists: state.lists, deleted: state.deleted, selected: state.selected };
+            const copy = structuredClone(snapshot);
+            const key = archiveKey;
+            saveQueue = saveQueue.catch(() => false).then(async () => {
+                try {
+                    if (archiveDb) await archiveRequest('readwrite', copy, key);
+                    else localStorage.setItem(storageKey(key), JSON.stringify(copy));
+                    return true;
+                } catch {
+                    notify('本地存储空间不足，词表尚未存档，请立即导出备份');
+                    return false;
+                }
+            });
+            if (touch) window.dispatchEvent(new CustomEvent('wordlist:changed', { detail: { listId: state.selected, updatedAt: Date.now() } }));
+            return saveQueue;
+        }
+        async function load() {
+            archiveDb = await openArchive();
+            try {
+                const stored = await readArchive('workspace');
+                if (archiveDb && Array.isArray(stored.lists) && localStorage.getItem(STORAGE_KEY)) {
+                    try {
+                        await archiveRequest('readwrite', stored, 'workspace');
+                        localStorage.removeItem(STORAGE_KEY);
+                    } catch { archiveDb = null; }
+                }
+                if (Array.isArray(stored.lists)) {
+                    state.lists = stored.lists.filter(list => list && typeof list.id === 'string' && Array.isArray(list.entries));
+                    state.selected = stored.selected || state.lists[0]?.id || '';
+                }
+                if (stored.deleted && Array.isArray(stored.deleted.lists) && Array.isArray(stored.deleted.entries)) state.deleted = stored.deleted;
+                const now = Date.now();
+                let migrated = false;
+                for (const list of state.lists) {
+                    if (!list.updatedAt) { list.updatedAt = now; migrated = true; }
+                    if (!list.nameUpdatedAt) { list.nameUpdatedAt = list.updatedAt; migrated = true; }
+                    if (!list.createdAt) { list.createdAt = list.updatedAt; migrated = true; }
+                    for (const [index, entry] of list.entries.entries()) {
+                        if (!entry.id) { entry.id = newId(); migrated = true; }
+                        if (!entry.createdAt) { entry.createdAt = now; entry.updatedAt = now; migrated = true; }
+                        if (!entry.updatedAt) { entry.updatedAt = entry.createdAt; migrated = true; }
+                        if (entry.order === undefined) { entry.order = index; migrated = true; }
+                    }
+                }
+                if (migrated) await save(false);
+            } catch { notify('已保存的单词表无法读取'); }
+            const sort = localStorage.getItem(SORT_KEY);
+            if (['original', 'reverse', 'az', 'za'].includes(sort)) state.sort = sort;
+            const view = localStorage.getItem(VIEW_KEY);
+            if (['split', 'list', 'dictionary'].includes(view)) state.view = view;
+            state.headerCollapsed = localStorage.getItem(HEADER_KEY) === 'true' ||
+                (localStorage.getItem(HEADER_KEY) === null && state.lists.length > 0);
+            state.controlsCollapsed = localStorage.getItem(CONTROLS_KEY) === 'true' ||
+                (localStorage.getItem(CONTROLS_KEY) === null && state.lists.length > 0);
+            state.hideNotes = localStorage.getItem(NOTES_KEY) === 'true';
+            if (fileMode) {
+                try { state.fileFavorites = JSON.parse(localStorage.getItem(FILE_FAVORITES_KEY) || '{}') || Object.create(null); }
+                catch { state.fileFavorites = Object.create(null); }
+            }
+        }
+        function favorites() {
+            if (fileMode) return state.fileFavorites;
+            try { return JSON.parse(localStorage.getItem('word_favorites_v10') || '{}') || {}; }
+            catch { return {}; }
+        }
+        function favoriteKey(word) { return /[\u3400-\u9fff]/.test(word) ? word : word.toLowerCase(); }
+        function isFavorite(word, saved) { return Object.prototype.hasOwnProperty.call(saved, favoriteKey(word)); }
+        function setView(view) {
+            state.view = view;
+            $('workspace').dataset.view = view;
+            document.querySelectorAll('.modebar [data-view]').forEach(button =>
+                button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+            localStorage.setItem(VIEW_KEY, view);
+        }
+        function setHeaderCollapsed(collapsed) {
+            state.headerCollapsed = collapsed;
+            $('library').classList.toggle('compact', collapsed);
+            $('headerToggle').textContent = collapsed ? '展开导入区' : '收起导入区';
+            $('headerToggle').setAttribute('aria-expanded', String(!collapsed));
+            localStorage.setItem(HEADER_KEY, String(collapsed));
+        }
+        function setControlsCollapsed(collapsed) {
+            state.controlsCollapsed = collapsed;
+            document.querySelector('.controls').classList.toggle('compact', collapsed);
+            $('controlsToggle').setAttribute('aria-expanded', String(!collapsed));
+            $('controlsToggle').setAttribute('aria-label', collapsed ? '展开筛选与管理' : '收起筛选与管理');
+            $('controlsToggle').title = collapsed ? '展开筛选与管理' : '收起筛选与管理';
+            localStorage.setItem(CONTROLS_KEY, String(collapsed));
+        }
+        function setListPopover(open) {
+            $('listPopover').hidden = !open;
+            $('listQuickToggle').setAttribute('aria-expanded', String(open));
+            if (open) $('listSelect').focus();
+        }
+        function setHideNotes(hidden) {
+            state.hideNotes = hidden;
+            $('library').classList.toggle('hide-notes', hidden);
+            $('noteToggle').setAttribute('aria-pressed', String(hidden));
+            $('noteToggle').setAttribute('aria-label', hidden ? '显示释义' : '隐藏释义');
+            $('noteToggle').title = hidden ? '显示释义' : '隐藏释义';
+            $('noteToggle').textContent = hidden ? '词' : '译';
+            localStorage.setItem(NOTES_KEY, String(hidden));
+        }
+        function ensureList() {
+            let list = currentList();
+            if (!list) {
+                const now = Date.now();
+                list = { id: newId(), name: '我的词表', entries: [], createdAt: now, nameUpdatedAt: now, updatedAt: now };
+                state.lists.push(list); state.selected = list.id;
+                refreshPicker();
+            }
+            return list;
+        }
+        function addEntry(word, note = '', group = '') {
+            const normalized = word.trim();
+            if (!normalized || normalized.length > 200) { notify('请输入不超过 200 字的词条'); return false; }
+            const list = ensureList();
+            if (list.entries.some(entry => favoriteKey(entry.word) === favoriteKey(normalized))) {
+                notify('当前词表里已有这个词条'); return false;
+            }
+            list.entries.push({ id: newId(), word: normalized, note: note.trim().slice(0, 300), group,
+                order: list.entries.length, createdAt: Date.now(), updatedAt: Date.now() });
+            save(); refreshPicker(); render(); requestFavorites();
+            return true;
+        }
+        function addFromRight(word) {
+            if (!word || word.length > 200) return;
+            if (currentList()?.entries.some(entry => favoriteKey(entry.word) === favoriteKey(word))) return;
+            if (addEntry(word, '', '右侧收藏')) notify(`已将 ${word} 加入左侧词表`);
+        }
+
+        function refreshPicker() {
+            const picker = $('listSelect');
+            picker.replaceChildren();
+            if (!state.lists.length) picker.add(new Option('尚未导入单词表', ''));
+            else state.lists.forEach(list => picker.add(new Option(`${list.name} · ${list.entries.length}`, list.id)));
+            picker.value = state.selected;
+            $('listQuickToggle').title = currentList() ? `当前词表：${currentList().name}` : '选择词表';
+            $('renameListButton').disabled = !currentList();
+            $('deleteButton').disabled = !currentList();
+            $('listCount').textContent = `${currentList()?.entries.length || 0} 个词条`;
+        }
+
+        function entryNode(entry, index, saved) {
+            const row = document.createElement('div');
+            row.className = `entry${state.active === entry.word ? ' active' : ''}`;
+            row.dataset.index = index;
+            const wordButton = document.createElement('div');
+            wordButton.className = 'word-button';
+            wordButton.setAttribute('role', 'button');
+            wordButton.tabIndex = 0;
+            wordButton.setAttribute('aria-label', `查询 ${entry.word}`);
+            const line = document.createElement('span');
+            line.className = 'word-line';
+            const word = document.createElement('span');
+            word.className = 'word';
+            word.textContent = entry.word;
+            line.append(word);
+            if (isFavorite(entry.word, saved)) {
+                const star = document.createElement('span');
+                star.className = 'star'; star.textContent = '★'; star.setAttribute('aria-label', '已收藏');
+                line.append(star);
+            }
+            if (entry.marked) {
+                const marked = document.createElement('span');
+                marked.className = 'marked'; marked.textContent = '✓ 已标记';
+                line.append(marked);
+            }
+            wordButton.append(line);
+            if (entry.note) {
+                const note = document.createElement('span');
+                note.className = 'note'; note.textContent = entry.note;
+                note.title = entry.note;
+                wordButton.append(note);
+            }
+            const more = document.createElement('button');
+            more.className = 'more-button'; more.type = 'button'; more.textContent = '⋯';
+            more.setAttribute('aria-label', `${entry.word} 的操作`);
+            row.append(wordButton, more);
+            return row;
+        }
+
+        function appendMore() {
+            const container = $('entries');
+            loadObserver?.disconnect();
+            container.querySelector('.load-more')?.remove();
+            const saved = favorites();
+            const fragment = document.createDocumentFragment();
+            const end = Math.min(renderedRows + 240, visibleRows.length);
+            for (let offset = renderedRows; offset < end; offset++) {
+                const { entry, index } = visibleRows[offset];
+                if (state.sort !== 'az' && state.sort !== 'za' && entry.group && entry.group !== lastRenderedGroup) {
+                    const heading = document.createElement('div');
+                    heading.className = 'group-label'; heading.textContent = entry.group;
+                    fragment.append(heading); lastRenderedGroup = entry.group;
+                }
+                fragment.append(entryNode(entry, index, saved));
+            }
+            renderedRows = end;
+            if (renderedRows < visibleRows.length) {
+                const more = document.createElement('button');
+                more.className = 'load-more'; more.type = 'button';
+                more.textContent = `继续显示（已显示 ${renderedRows} / ${visibleRows.length}）`;
+                more.addEventListener('click', appendMore);
+                fragment.append(more);
+                container.append(fragment);
+                loadObserver.observe(more);
+            } else container.append(fragment);
+        }
+
+        function render(reset = false) {
+            const list = currentList();
+            const container = $('entries');
+            const targetCount = reset ? 240 : Math.max(240, renderedRows);
+            const previousScroll = reset ? 0 : container.scrollTop;
+            loadObserver?.disconnect();
+            container.replaceChildren();
+            visibleRows = []; renderedRows = 0; lastRenderedGroup = null;
+            if (!list) {
+                container.innerHTML = '<div class="empty"><strong>从你的词表开始</strong>选择 XLSX、CSV 或 TXT 文件，导入后即可逐词查询。</div>';
+                $('count').textContent = '0 个词条';
+                $('listCount').textContent = '0 个词条';
+                return;
+            }
+            $('listCount').textContent = `${list.entries.length} 个词条`;
+            const query = $('filterInput').value.trim().toLocaleLowerCase();
+            const saved = favorites();
+            const rows = list.entries.map((entry, index) => ({ entry, index }));
+            if (state.sort === 'reverse') rows.reverse();
+            if (state.sort === 'az' || state.sort === 'za') {
+                const collator = new Intl.Collator(['zh-Hans-CN', 'en'], { numeric: true, sensitivity: 'base' });
+                rows.sort((a, b) => (state.sort === 'az' ? 1 : -1) * collator.compare(a.entry.word, b.entry.word));
+            }
+            rows.forEach(({ entry, index }) => {
+                if (query && !`${entry.word} ${entry.note || ''}`.toLocaleLowerCase().includes(query)) return;
+                if (state.filter === 'favorite' && !isFavorite(entry.word, saved)) return;
+                if (state.filter === 'marked' && !entry.marked) return;
+                visibleRows.push({ entry, index });
+            });
+            if (!visibleRows.length) container.innerHTML = '<div class="empty"><strong>没有匹配的词条</strong>试试调整搜索词或筛选条件。</div>';
+            else {
+                while (renderedRows < Math.min(targetCount, visibleRows.length)) appendMore();
+                container.scrollTop = previousScroll;
+            }
+            $('count').textContent = `${visibleRows.length} / ${list.entries.length} 个词条`;
+        }
+
+        function frameWindow() {
+            try {
+                const frame = $('dictionaryFrame').contentWindow;
+                return frame?.document?.getElementById('wordInput') && typeof frame.manualSearch === 'function' ? frame : null;
+            } catch { return null; }
+        }
+
+        function postToFrame(type, data = {}) {
+            $('dictionaryFrame').contentWindow?.postMessage({ channel: CHANNEL, type, ...data }, '*');
+        }
+
+        function requestFavorites() {
+            if (!fileMode || !state.frameReady) return;
+            postToFrame('get-favorites', { words: currentList()?.entries.map(entry => favoriteKey(entry.word)) || [] });
+        }
+
+        function query(index) {
+            const entry = currentList()?.entries[index];
+            if (!entry) return;
+            if (state.view === 'list') setView('split');
+            if (fileMode) {
+                setActive(index, entry.word);
+                if (state.frameReady) postToFrame('query', { word: entry.word });
+                else { state.pendingQuery = entry.word; notify('右侧页面加载中，完成后会自动查询'); }
+                return;
+            }
+            const frame = frameWindow();
+            if (!frame) { notify('右侧解析页尚未就绪，请稍后再试'); return; }
+            frame.document.getElementById('wordInput').value = entry.word;
+            frame.manualSearch();
+            setActive(index, entry.word);
+        }
+
+        function setActive(index, word) {
+            state.active = word;
+            $('entries').querySelectorAll('.entry.active').forEach(row => row.classList.remove('active'));
+            $('entries').querySelector(`.entry[data-index="${index}"]`)?.classList.add('active');
+        }
+
+        function closeMenu() {
+            $('actionMenu').classList.remove('open');
+            state.menuIndex = -1;
+        }
+        function openMenu(index, anchor) {
+            const entry = currentList()?.entries[index];
+            if (!entry) return;
+            state.menuIndex = index;
+            const frame = fileMode ? null : frameWindow();
+            const saved = frame ? frame.hasFavorite(favoriteKey(entry.word)) : isFavorite(entry.word, favorites());
+            $('menuFavorite').textContent = saved ? '☆ 取消收藏' : '★ 加入收藏';
+            $('menuMark').textContent = entry.marked ? '✓ 取消标记' : '✓ 标记已掌握';
+            const menu = $('actionMenu');
+            menu.classList.add('open');
+            const rect = anchor.getBoundingClientRect();
+            menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - menu.offsetWidth - 8))}px`;
+            menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, innerHeight - menu.offsetHeight - 8))}px`;
+            $('menuFavorite').focus();
+        }
+        function toggleFavorite() {
+            const entry = currentList()?.entries[state.menuIndex];
+            if (!entry) return;
+            if (fileMode) {
+                if (!state.frameReady) { notify('右侧页面仍在加载，请稍后收藏'); return; }
+                const word = favoriteKey(entry.word);
+                postToFrame('set-favorite', { word, desired: !isFavorite(word, favorites()) });
+                closeMenu();
+                return;
+            }
+            const frame = frameWindow();
+            if (!frame || typeof frame.toggleFavoriteWord !== 'function') {
+                notify('右侧解析页尚未就绪，暂时无法收藏'); return;
+            }
+            const word = favoriteKey(entry.word);
+            const wasSaved = frame.hasFavorite(word);
+            frame.toggleFavoriteWord(word);
+            notify(wasSaved ? `已取消收藏 ${entry.word}` : `已收藏 ${entry.word}`);
+            closeMenu(); render();
+        }
+        function toggleMark() {
+            const entry = currentList()?.entries[state.menuIndex];
+            if (!entry) return;
+            entry.marked = !entry.marked;
+            entry.updatedAt = Date.now();
+            save();
+            notify(entry.marked ? `已标记 ${entry.word}` : `已取消标记 ${entry.word}`);
+            closeMenu(); render();
+        }
+
+        function deleteEntry() {
+            const list = currentList();
+            const index = state.menuIndex;
+            const entry = list?.entries[index];
+            if (!entry || !confirm(`从当前词表删除“${entry.word}”？`)) return;
+            state.deleted.entries.push({ listId: list.id, entryId: entry.id, deletedAt: Date.now() });
+            list.entries.splice(index, 1);
+            save(); refreshPicker(); closeMenu(); render(); notify(`已从词表删除 ${entry.word}`);
+        }
+
+        function openRenameList() {
+            const list = currentList();
+            if (!list) return;
+            setListPopover(false);
+            $('renameListInput').value = list.name;
+            $('renameListDialog').showModal();
+            $('renameListInput').focus();
+            $('renameListInput').select();
+        }
+
+        function renameList(event) {
+            event.preventDefault();
+            const list = currentList();
+            if (!list) return;
+            const next = $('renameListInput').value.trim().slice(0, 80);
+            if (!next) { notify('请输入词表名称'); return; }
+            if (state.lists.some(other => other !== list && other.name === next)) {
+                notify('已有同名词表'); return;
+            }
+            list.name = next;
+            list.nameUpdatedAt = Date.now();
+            save(); refreshPicker();
+            $('renameListDialog').close();
+            notify(`词表已重命名为 ${next}`);
+        }
+
+        function downloadExport(type) {
+            const list = currentList();
+            if (!list) { notify('请先创建或导入词表'); return; }
+            try {
+                const data = type === 'csv' ? WordList.exportCsv(list.entries, favorites())
+                    : WordList.exportXlsx(list.entries, favorites());
+                const mime = type === 'csv' ? 'text/csv;charset=utf-8'
+                    : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                const url = URL.createObjectURL(new Blob([data], { type: mime }));
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${list.name.replace(/\.(xlsx|csv|txt)$/i, '').replace(/[\\/:*?"<>|]/g, '_') || '单词表'}.${type}`;
+                document.body.append(link); link.click(); link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                notify(`已导出 ${list.entries.length} 个词条`);
+            } catch (error) { notify(`导出失败：${error.message}`); }
+        }
+
+        function backupArchive() {
+            const snapshot = window.WordlistWorkspace?.getSnapshot();
+            if (!snapshot?.lists.length) { notify('没有可备份的词表'); return; }
+            const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot)], { type: 'application/json' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `多彩词表存档-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.append(link); link.click(); link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            notify(`已备份 ${snapshot.lists.length} 份处理后的词表`);
+        }
+
+        async function restoreArchive(file) {
+            if (!file) return;
+            try {
+                if (file.size > 30 * 1024 * 1024) throw new Error('存档超过 30 MB');
+                const snapshot = JSON.parse(await file.text());
+                if (snapshot?.schemaVersion !== 1 || !Array.isArray(snapshot.lists) ||
+                    !snapshot.lists.every(list => typeof list.id === 'string' && typeof list.name === 'string' &&
+                        Array.isArray(list.entries) && list.entries.every(entry => typeof entry.id === 'string' && typeof entry.word === 'string')))
+                    throw new Error('不是有效的词表存档');
+                const count = snapshot.lists.reduce((sum, list) => sum + list.entries.length, 0);
+                if (count > 100000) throw new Error('存档超过 100000 个词条');
+                const before = window.WordlistWorkspace.getSnapshot();
+                const merged = WorkspaceSyncCore.unpack(
+                    WorkspaceSyncCore.mergePacked(WorkspaceSyncCore.pack(before), WorkspaceSyncCore.pack(snapshot)),
+                    before.selected || snapshot.selected);
+                const saved = await window.WordlistWorkspace.applySnapshot(merged);
+                if (!saved) throw new Error('本地存档失败，请先导出备份');
+                window.dispatchEvent(new CustomEvent('wordlist:changed'));
+                notify(`已导入旧存档：${snapshot.lists.length} 份词表、${count} 个词条`);
+            } catch (error) { notify(`导入存档失败：${error.message}`); }
+            finally { $('archiveInput').value = ''; }
+        }
+
+        async function importFiles(files) {
+            let imported = 0, importedEntries = 0;
+            for (const file of files) {
+                try {
+                    const entries = await WordList.parseFile(file);
+                    const id = newId();
+                    const now = Date.now();
+                    state.lists.push({ id, name: file.name, createdAt: now, nameUpdatedAt: now, updatedAt: now,
+                        entries: entries.map((entry, index) => ({ ...entry, id: newId(), order: index, createdAt: now, updatedAt: now })) });
+                    state.selected = id;
+                    imported++; importedEntries += entries.length;
+                } catch (error) { notify(`${file.name}：${error.message}`); }
+            }
+            if (imported) {
+                const persisted = await save(); refreshPicker(); setHeaderCollapsed(true); setControlsCollapsed(true); render(true);
+                requestFavorites();
+                notify(persisted ? `已导入并保存 ${imported} 份单词表，共 ${importedEntries} 个去重词条` : '词表已显示但未存档，请立即导出备份');
+            }
+            $('fileInput').value = '';
+        }
+
+        function installEvents() {
+            document.querySelectorAll('.modebar [data-view]').forEach(button =>
+                button.addEventListener('click', () => setView(button.dataset.view)));
+            $('headerToggle').addEventListener('click', () => setHeaderCollapsed(!state.headerCollapsed));
+            $('controlsToggle').addEventListener('click', () => setControlsCollapsed(!state.controlsCollapsed));
+            $('listQuickToggle').addEventListener('click', () => setListPopover($('listPopover').hidden));
+            $('noteToggle').addEventListener('click', () => setHideNotes(!state.hideNotes));
+            $('importButton').addEventListener('click', () => $('fileInput').click());
+            $('fileInput').addEventListener('change', event => importFiles(Array.from(event.target.files)));
+            $('newListButton').addEventListener('click', () => {
+                const name = prompt('新词表名称', `新词表 ${state.lists.length + 1}`)?.trim();
+                if (!name) return;
+                const now = Date.now();
+                const list = { id: newId(), name: name.slice(0, 80), entries: [], createdAt: now, nameUpdatedAt: now, updatedAt: now };
+                state.lists.push(list); state.selected = list.id;
+                save(); refreshPicker(); setHeaderCollapsed(true); setControlsCollapsed(false); render(true);
+            });
+            $('addWordButton').addEventListener('click', () => {
+                $('addForm').classList.toggle('open');
+                if ($('addForm').classList.contains('open')) $('newWord').focus();
+            });
+            $('addForm').addEventListener('submit', event => {
+                event.preventDefault();
+                if (addEntry($('newWord').value, $('newNote').value)) {
+                    $('addForm').reset(); $('newWord').focus(); notify('词条已加入当前词表');
+                }
+            });
+            $('exportCsvButton').addEventListener('click', () => downloadExport('csv'));
+            $('exportXlsxButton').addEventListener('click', () => downloadExport('xlsx'));
+            $('backupArchiveButton').addEventListener('click', backupArchive);
+            $('restoreArchiveButton').addEventListener('click', () => $('archiveInput').click());
+            $('archiveInput').addEventListener('change', event => void restoreArchive(event.target.files[0]));
+            $('cleanListButton').addEventListener('click', () => {
+                const list = currentList();
+                if (!list) { notify('请先选择词表'); return; }
+                const kept = WordList.filterEntries(list.entries);
+                const removed = list.entries.filter(entry => !kept.includes(entry));
+                if (!removed.length) { notify('没有发现疑似标题'); return; }
+                if (!confirm(`发现 ${removed.length} 个疑似标题或非词条，例如“${removed.slice(0, 3).map(entry => entry.word).join('、')}”。从当前词表移除？`)) return;
+                removed.forEach(entry => state.deleted.entries.push({ listId: list.id, entryId: entry.id, deletedAt: Date.now() }));
+                list.entries = kept;
+                save(); refreshPicker(); render(); notify(`已清理 ${removed.length} 个疑似标题`);
+            });
+            $('sampleButton').addEventListener('click', () => {
+                const entries = WordList.parseTxt('# 示例词表\n1. serendipity — 意外发现美好事物的能力\n2. resilient — 有韧性的\n3. in a nutshell — 简言之', '示例');
+                const id = `sample-${Date.now()}`;
+                const now = Date.now();
+                state.lists.push({ id, name: '示例词表', createdAt: now, nameUpdatedAt: now, updatedAt: now,
+                    entries: entries.map((entry, index) => ({ ...entry, id: newId(), order: index, createdAt: now, updatedAt: now })) }); state.selected = id;
+                save(); refreshPicker(); setHeaderCollapsed(true); setControlsCollapsed(true); render(true); requestFavorites(); notify('已加载示例词表');
+            });
+            $('listSelect').addEventListener('change', event => {
+                state.selected = event.target.value; state.active = ''; save(false); refreshPicker(); render(true); requestFavorites();
+                setListPopover(false);
+            });
+            $('renameListButton').addEventListener('click', openRenameList);
+            $('renameListForm').addEventListener('submit', renameList);
+            $('cancelRenameList').addEventListener('click', () => $('renameListDialog').close());
+            $('deleteButton').addEventListener('click', () => {
+                const list = currentList();
+                if (!list || !confirm(`删除单词表“${list.name}”？此操作不会删除右侧的收藏或查询缓存。`)) return;
+                state.deleted.lists.push({ listId: list.id, deletedAt: Date.now() });
+                state.lists = state.lists.filter(item => item.id !== list.id);
+                state.selected = state.lists[0]?.id || ''; state.active = '';
+                save(); refreshPicker(); render(true); setListPopover(false); notify('已删除单词表');
+            });
+            $('filterInput').addEventListener('input', () => render(true));
+            $('sortSelect').addEventListener('change', event => {
+                state.sort = event.target.value;
+                localStorage.setItem(SORT_KEY, state.sort);
+                render(true);
+                $('entries').scrollTop = 0;
+            });
+            document.querySelectorAll('.filter').forEach(button => button.addEventListener('click', () => {
+                state.filter = button.dataset.filter;
+                document.querySelectorAll('.filter').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+                render(true);
+            }));
+            $('entries').addEventListener('click', event => {
+                const row = event.target.closest('.entry');
+                if (!row) return;
+                if (event.target.closest('.more-button')) { openMenu(Number(row.dataset.index), event.target.closest('button')); return; }
+                if (!event.target.closest('.word-button')) return;
+                const selection = window.getSelection();
+                if (selection && !selection.isCollapsed && event.target.closest('.word-button').contains(selection.anchorNode)) return;
+                if (suppressClick) { suppressClick = false; return; }
+                query(Number(row.dataset.index));
+            });
+            $('entries').addEventListener('keydown', event => {
+                const button = event.target.closest('.word-button');
+                if (!button || (event.key !== 'Enter' && event.key !== ' ')) return;
+                event.preventDefault(); query(Number(button.closest('.entry').dataset.index));
+            });
+            $('entries').addEventListener('pointerdown', event => {
+                const button = event.target.closest('.word-button');
+                if (!button || event.pointerType === 'mouse') return;
+                const row = button.closest('.entry');
+                pressStart = { x: event.clientX, y: event.clientY };
+                clearTimeout(pressTimer);
+                pressTimer = setTimeout(() => {
+                    suppressClick = true;
+                    setTimeout(() => { suppressClick = false; }, 300);
+                    openMenu(Number(row.dataset.index), button);
+                }, 550);
+            });
+            $('entries').addEventListener('pointermove', event => {
+                if (pressStart && Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 12) clearTimeout(pressTimer);
+            });
+            for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+                $('entries').addEventListener(type, () => { clearTimeout(pressTimer); pressStart = null; });
+            }
+            $('entries').addEventListener('contextmenu', event => {
+                const row = event.target.closest('.entry');
+                if (!row) return;
+                if (window.getSelection()?.toString().trim()) return;
+                event.preventDefault(); clearTimeout(pressTimer);
+                openMenu(Number(row.dataset.index), row);
+            });
+            $('menuFavorite').addEventListener('click', toggleFavorite);
+            $('menuMark').addEventListener('click', toggleMark);
+            $('menuDelete').addEventListener('click', deleteEntry);
+            document.addEventListener('pointerdown', event => {
+                if (!event.target.closest('#actionMenu, .more-button, .word-button')) closeMenu();
+                if (!event.target.closest('.list-picker')) setListPopover(false);
+            });
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') { closeMenu(); setListPopover(false); }
+            });
+            window.addEventListener('storage', event => {
+                if (fileMode || event.key !== 'word_favorites_v10') return;
+                render();
+                try {
+                    const word = frameWindow()?.document.getElementById('wordInput').value.trim();
+                    const before = JSON.parse(event.oldValue || '{}');
+                    const after = JSON.parse(event.newValue || '{}');
+                    if (word && !isFavorite(word, before) && isFavorite(word, after)) addFromRight(word);
+                } catch { /* Right pane may still be loading. */ }
+            });
+            window.addEventListener('message', event => {
+                if (!fileMode || event.source !== $('dictionaryFrame').contentWindow || event.data?.channel !== CHANNEL) return;
+                const message = event.data;
+                if (message.type === 'ready') {
+                    state.frameReady = true;
+                    requestFavorites();
+                    if (state.pendingQuery) {
+                        postToFrame('query', { word: state.pendingQuery });
+                        state.pendingQuery = '';
+                    }
+                } else if (message.type === 'favorites' && Array.isArray(message.entries)) {
+                    for (const [word, saved] of message.entries) {
+                        if (saved) state.fileFavorites[word] = true;
+                        else delete state.fileFavorites[word];
+                    }
+                    localStorage.setItem(FILE_FAVORITES_KEY, JSON.stringify(state.fileFavorites));
+                    render();
+                } else if (message.type === 'favorite-state' && typeof message.word === 'string') {
+                    if (message.saved) state.fileFavorites[message.word] = true;
+                    else delete state.fileFavorites[message.word];
+                    localStorage.setItem(FILE_FAVORITES_KEY, JSON.stringify(state.fileFavorites));
+                    notify(message.saved ? `已收藏 ${message.word}` : `已取消收藏 ${message.word}`);
+                    render();
+                    if (message.saved) addFromRight(message.word);
+                } else if (message.type === 'error') notify(message.text || '右侧操作失败');
+            });
+            $('dictionaryFrame').addEventListener('load', () => {
+                if (!fileMode) { state.frameReady = true; render(); }
+                else setTimeout(() => {
+                    if (!state.frameReady) notify('本地右侧页面没有响应；请用 npm start 打开本地服务再试');
+                }, 1000);
+            });
+            const library = $('library');
+            library.addEventListener('pointerenter', requestFavorites);
+            library.addEventListener('dragover', event => { event.preventDefault(); library.classList.add('dragging'); });
+            library.addEventListener('dragleave', event => { if (!library.contains(event.relatedTarget)) library.classList.remove('dragging'); });
+            library.addEventListener('drop', event => {
+                event.preventDefault(); library.classList.remove('dragging');
+                if (event.dataTransfer.files.length) importFiles(Array.from(event.dataTransfer.files));
+            });
+            const divider = $('divider');
+            divider.addEventListener('pointerdown', event => {
+                divider.setPointerCapture(event.pointerId);
+                divider.addEventListener('pointermove', resize);
+            });
+            divider.addEventListener('pointerup', () => {
+                divider.removeEventListener('pointermove', resize);
+                localStorage.setItem(WIDTH_KEY, getComputedStyle($('workspace')).getPropertyValue('--left-width'));
+            });
+            divider.addEventListener('keydown', event => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                event.preventDefault();
+                const current = parseFloat(getComputedStyle($('workspace')).getPropertyValue('--left-width')) || 40;
+                const next = Math.max(25, Math.min(65, current + (event.key === 'ArrowRight' ? 3 : -3)));
+                $('workspace').style.setProperty('--left-width', `${next}%`);
+                localStorage.setItem(WIDTH_KEY, `${next}%`);
+            });
+            function resize(event) {
+                const percent = Math.max(25, Math.min(65, event.clientX / $('workspace').clientWidth * 100));
+                $('workspace').style.setProperty('--left-width', `${percent}%`);
+            }
+        }
+
+        async function initialize() {
+        loadObserver = new IntersectionObserver(entries => {
+            if (entries.some(entry => entry.isIntersecting)) appendMore();
+        }, { root: $('entries'), rootMargin: '350px' });
+        await load();
+        window.WordlistWorkspace = {
+            getSnapshot: () => structuredClone({ schemaVersion: 1, lists: state.lists, deleted: state.deleted, selected: state.selected }),
+            readArchive,
+            async writeArchive(key, snapshot) {
+                if (archiveDb) await archiveRequest('readwrite', structuredClone(snapshot), key);
+                else localStorage.setItem(storageKey(key), JSON.stringify(snapshot));
+            },
+            async activateArchive(key, seed) {
+                await saveQueue.catch(() => false);
+                const stored = await readArchive(key);
+                archiveKey = key;
+                const snapshot = Array.isArray(stored.lists) ? stored
+                    : Array.isArray(seed?.lists) ? seed : WorkspaceSyncCore.empty();
+                return window.WordlistWorkspace.applySnapshot(snapshot);
+            },
+            subscribe: callback => {
+                const listener = () => callback(window.WordlistWorkspace.getSnapshot());
+                window.addEventListener('wordlist:changed', listener);
+                return () => window.removeEventListener('wordlist:changed', listener);
+            },
+            applySnapshot: snapshot => {
+                if (snapshot?.schemaVersion !== 1 || !Array.isArray(snapshot.lists)) throw new Error('不支持的词表数据格式');
+                state.lists = structuredClone(snapshot.lists);
+                state.deleted = snapshot.deleted && Array.isArray(snapshot.deleted.lists) && Array.isArray(snapshot.deleted.entries)
+                    ? structuredClone(snapshot.deleted) : { lists: [], entries: [] };
+                state.selected = state.lists.some(list => list.id === snapshot.selected) ? snapshot.selected : state.lists[0]?.id || '';
+                const persisted = save(false); refreshPicker(); render(); requestFavorites();
+                return persisted;
+            }
+        };
+        setView(state.view);
+        setHeaderCollapsed(state.headerCollapsed);
+        setControlsCollapsed(state.controlsCollapsed);
+        setHideNotes(state.hideNotes);
+        $('sortSelect').value = state.sort;
+        const savedWidth = localStorage.getItem(WIDTH_KEY);
+        if (/^(?:[2-5]\d|6[0-5])(?:\.\d+)?%$/.test(savedWidth || '')) $('workspace').style.setProperty('--left-width', savedWidth);
+        refreshPicker(); render(); installEvents();
+        $('dictionaryFrame').src = 'dictionary_workspace_right.html';
+        window.dispatchEvent(new Event('wordlist:ready'));
+        }
+        initialize().catch(error => notify(`词表初始化失败：${error.message}`));
+    })();
+    </script>
+    <script type="module" src="workspace_cloud.js"></script>
+</body>
+</html>
