@@ -7,6 +7,13 @@
     if (!toggle || !overlay || !panel) return;
     const style = document.createElement('style');
     style.textContent = `
+        @media (max-width: 1100px) {
+            /* Keep the navigation visible in iPad Safari and avoid its transformed entrance layer. */
+            .top-nav { position: sticky; top: 0; z-index: 10; background: var(--bg-color);
+                animation: none !important; transform: none !important; opacity: 1 !important; }
+            html { scroll-padding-top: 86px; }
+            .search-surface, #result { scroll-margin-top: 86px; }
+        }
         .toc-overlay, .toc-overlay.show {
             right: auto !important; bottom: auto !important;
             width: 260px; height: auto; max-height: min(65vh, 520px);
