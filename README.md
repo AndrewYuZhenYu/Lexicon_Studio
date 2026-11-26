@@ -1,14 +1,13 @@
-# Lexicon Studio · GitHub Pages 上线仓库
+# 多彩词汇 · Lexicon Studio
 
-这是正式网站的上线文件夹，对应 GitHub 仓库 `AndrewYuZhenYu/Lexicon_Studio`。GitHub Pages 使用仓库根目录的 `index.html` 作为首页。日常开发在 `/Users/andrewyu/WebstormProjects/dictionary_API` 进行。
+多彩词汇是一个结合 AI 词汇解析与个人单词表的学习网站。页面可以在双栏、仅词表和仅查词之间切换：左侧管理自己的词，右侧查看完整解析。
 
-截至 2026-11-26，本文件夹中的 `index.html` 仍是单独的 v10.5 查词页。带左侧单词表的新双栏版已经打包在 `/Users/andrewyu/WebstormProjects/dictionary_API/site_workspace/dist`，尚未复制到本仓库或推送 GitHub。
+## 主要功能
 
-## 上线双栏版
+- **词汇解析**：查询英文单词、短语或中文表达，查看释义、用法、例句及相关内容；支持收藏、最近查询和解析缓存。
+- **导入单词表**：支持 XLSX、CSV 和有格式的 TXT。多 Sheet 表格可合并导入，并过滤常见标题、空行与重复词条。
+- **管理与复习**：导入后词表成为网站内的独立数据，可新增、重命名、删除词表或词条；支持搜索、筛选、排序、隐藏释义和标记。点击左侧词条可在右侧查询，长按可快速操作。
+- **导出与备份**：词表可导出为 CSV 或 XLSX，也可备份全部处理后的词表数据。
+- **云同步**：登录后，处理后的词表、词条修改与标记，以及查词历史、解析缓存、收藏和复习进度会同步到个人账号。不同用户的数据彼此隔离。
 
-1. 先把本文件夹现有的 `index.html` 复制到文件夹外备份。
-2. 打开上述 `site_workspace/dist`，**复制里面的全部内容**到本文件夹根目录，同名文件选择替换。不要只复制 `index.html`，也不要把整个 `dist` 文件夹套进来。`vendor` 文件夹及各个 JS 文件都必须一起复制。
-3. 在本仓库检查改动，提交并推送到 `main`。GitHub Pages 若仍设置为 `main` 分支的 `/ (root)`，会自动更新原网址；可在仓库的 **Actions** 或 **Settings → Pages** 查看部署结果。
-4. 打开原网址检查左侧词表和右侧查词。登录原有 Firebase 账号后，词表、词条修改与标记、收藏、查询历史和解析缓存会从云端恢复。
-
-GitHub Pages 只托管静态文件，不运行开发项目中的 `server.js`。生成新解析仍需使用者在网页中输入自己的 DeepSeek API Key；密钥不会上传到 Firebase，也不要写进仓库。换网址后需要重新输入一次。
+网站使用原生 HTML、CSS 和 JavaScript 构建，Firebase 负责账号与数据同步，DeepSeek 提供新词解析。生成尚无缓存的解析时，使用者需输入自己的 DeepSeek API Key；密钥仅保存在当前浏览器会话，不上传云端。
