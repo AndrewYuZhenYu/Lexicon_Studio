@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能词汇解析 v10.3</title>
+    <title>AI 智能词汇解析 v10.5</title>
     <style>
         /* ======== 亮色主题 (Apple-inspired) ======== */
         :root {
@@ -448,6 +448,17 @@
             flex-wrap: wrap;
             gap: 10px;
         }
+        .history-list[hidden] { display: none; }
+        .history-section.collapsed .history-title { margin-bottom: 0; }
+        .history-toggle {
+            display: inline-flex; align-items: center; gap: 9px; min-height: 36px;
+            padding: 0; border: 0; background: none; color: inherit;
+            font: inherit; cursor: pointer; text-align: left;
+        }
+        .history-toggle svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--motion-base); }
+        .history-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+        .history-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+        .history-count { color: var(--text-muted); font-size: 13px; font-weight: 600; }
 
         .history-item {
             background: var(--glass-bg);
@@ -489,14 +500,11 @@
             transition: all 0.06s var(--ease-in-out-expo);
         }
 
-        .history-item .cache-icon {
-            font-size: 12px;
-            opacity: 0.7;
-        }
-
         .clear-history {
             color: var(--c-title-5);
             cursor: pointer;
+            border: 0;
+            background: none;
             font-weight: 600;
             transition: opacity 0.3s var(--ease-out-expo);
             padding: 4px 8px;
@@ -1746,22 +1754,44 @@
         .quick-search-jump {
             display: inline-flex; position: fixed; left: max(12px, env(safe-area-inset-left));
             bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px)); z-index: 997;
-            align-items: center; justify-content: center; gap: 6px; width: 126px; min-height: 50px; padding: 0 12px;
-            border: 1px solid rgba(255,255,255,.3); border-radius: 999px;
-            background: #2f64dc; color: #fff; box-shadow: 0 10px 24px rgba(39, 95, 216, .28);
-            font: 700 15px/1 var(--ui-font); white-space: nowrap; cursor: pointer;
+            align-items: center; justify-content: center; width: 52px; height: 52px; padding: 0;
+            border: 1px solid rgba(75, 112, 171, .18); border-radius: 17px;
+            background: rgba(227, 236, 252, .74); color: #4168a9;
+            box-shadow: 0 7px 20px rgba(39, 71, 122, .10);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            cursor: pointer;
             opacity: 0; pointer-events: none; transform: translateY(12px);
-            transition: opacity var(--motion-base), transform var(--motion-base);
+            transition: opacity var(--motion-base), transform var(--motion-base), background var(--motion-base);
             -webkit-tap-highlight-color: transparent;
         }
         .quick-search-jump.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
         .quick-search-jump:active { transform: scale(.96); }
-        .quick-search-jump span { font-size: 20px; font-weight: 400; }
-        .quick-paste-search {
-            bottom: max(78px, calc(env(safe-area-inset-bottom) + 70px));
-            background: #148b77; box-shadow: 0 10px 24px rgba(20, 139, 119, .27);
+        .quick-search-jump svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .quick-search-jump::after {
+            content: attr(data-tooltip); position: absolute; left: calc(100% + 11px); top: 50%;
+            padding: 8px 11px; border-radius: 10px; background: rgba(29, 43, 68, .92);
+            color: #fff; font: 600 13px/1.2 var(--ui-font); white-space: nowrap;
+            box-shadow: 0 6px 18px rgba(20, 31, 52, .16); pointer-events: none;
+            opacity: 0; transform: translate(-4px, -50%);
+            transition: opacity var(--motion-base), transform var(--motion-base);
         }
+        .quick-search-jump.show-tooltip::after, .quick-search-jump:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+        @media (hover: hover) { .quick-search-jump:hover::after { opacity: 1; transform: translate(0, -50%); } }
+        .quick-paste-search {
+            bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
+            border-color: rgba(46, 137, 122, .18); background: rgba(216, 240, 234, .76);
+            color: #258573; box-shadow: 0 7px 20px rgba(31, 111, 100, .10);
+        }
+        .quick-favorite {
+            bottom: max(140px, calc(env(safe-area-inset-bottom) + 132px));
+            border-color: rgba(185, 132, 44, .19); background: rgba(255, 239, 210, .78);
+            color: #a96c19; box-shadow: 0 7px 20px rgba(145, 98, 25, .10);
+        }
+        .quick-favorite[aria-pressed="true"] svg { fill: currentColor; }
         .quick-paste-search:disabled { opacity: .55; cursor: wait; }
+        [data-theme="dark"] .quick-search-jump { border-color: rgba(139, 177, 255, .18); background: rgba(43, 63, 95, .78); color: #b5cfff; }
+        [data-theme="dark"] .quick-paste-search { border-color: rgba(104, 203, 181, .18); background: rgba(32, 75, 70, .78); color: #94decc; }
+        [data-theme="dark"] .quick-favorite { border-color: rgba(227, 179, 96, .2); background: rgba(94, 70, 37, .78); color: #f1c783; }
 
         @media (max-width: 1460px) { .toc-sidebar { display: none !important; } .toc-toggle.visible, .toc-overlay.show { display: flex !important; } }
         @media (min-width: 1461px) { .toc-toggle, .toc-overlay { display: none !important; } }
@@ -1861,7 +1891,7 @@
         </span>
         <div class="brand-copy">
             <h1>多彩词汇</h1>
-            <span>Lexicon Studio <i>·</i> 10.3</span>
+            <span>Lexicon Studio <i>·</i> 10.5</span>
         </div>
     </div>
     <div class="nav-actions">
@@ -1933,10 +1963,10 @@
 
     <div class="history-section" id="historySection" style="display: none;">
         <div class="history-title">
-            <span>最近查询 <small>RECENT</small></span>
-            <span class="clear-history" onclick="clearHistory()" role="button" tabindex="0">清空记录</span>
+            <button class="history-toggle" id="historyToggle" type="button" onclick="toggleHistoryCollapse()" aria-expanded="false" aria-controls="historyList"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m7 4 6 6-6 6"/></svg><span>最近查询 <small>RECENT</small></span><span class="history-count" id="historyCount"></span></button>
+            <button class="clear-history" type="button" onclick="clearHistory()">清空记录</button>
         </div>
-        <div class="history-list" id="historyList"></div>
+        <div class="history-list" id="historyList" hidden></div>
     </div>
 
     <div id="statusMessage"></div>
@@ -2017,8 +2047,9 @@
 <button class="side-sweep-btn" onclick="clearQueryCache()" title="清理查询缓存" aria-label="清理查询缓存">⌫</button>
 
 <!-- 侧边快捷查询与返回搜索栏 -->
-<button class="quick-search-jump quick-paste-search" id="quickPasteSearch" type="button" onclick="pasteAndSearch()" title="粘贴剪贴板内容并查询" aria-label="粘贴剪贴板内容并查询" aria-hidden="true" tabindex="-1"><span aria-hidden="true">⌕</span> 粘贴查词</button>
-<button class="quick-search-jump" id="quickSearchJump" type="button" onclick="jumpToSearch()" title="回到搜索栏" aria-label="回到搜索栏" aria-hidden="true" tabindex="-1"><span aria-hidden="true">↑</span> 回到顶部</button>
+<button class="quick-search-jump quick-favorite" id="quickFavorite" type="button" onclick="if (!consumeQuickActionLongPress(this)) toggleQuickFavorite()" data-tooltip="收藏当前词条" aria-label="收藏当前词条" aria-pressed="false" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.8 2.86 5.8 6.4.93-4.63 4.51 1.1 6.38L12 17.4l-5.73 3.02 1.1-6.38L2.74 9.53l6.4-.93L12 2.8Z"/></svg></button>
+<button class="quick-search-jump quick-paste-search" id="quickPasteSearch" type="button" onclick="if (!consumeQuickActionLongPress(this)) pasteAndSearch()" data-tooltip="粘贴并查询" aria-label="粘贴剪贴板内容并查询" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4.5" width="13" height="16" rx="2.5"/><path d="M9 4.5V3.3A1.3 1.3 0 0 1 10.3 2h2.4A1.3 1.3 0 0 1 14 3.3v1.2M8.5 10h6"/><circle cx="15.5" cy="15.5" r="3"/><path d="m17.7 17.7 2.1 2.1"/></svg></button>
+<button class="quick-search-jump" id="quickSearchJump" type="button" onclick="if (!consumeQuickActionLongPress(this)) jumpToSearch()" data-tooltip="回到搜索栏" aria-label="回到搜索栏" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5m-5 5 5-5 5 5"/><path d="M5 21h14"/></svg></button>
 
 <!-- 桌面端目录侧边栏 -->
 <nav class="toc-sidebar" id="tocSidebar">
@@ -2057,6 +2088,7 @@
         THEME: 'color_theme_v5',
         READING_SIZE: 'reading_font_size_v10',
         HISTORY: 'word_history_v5',
+        HISTORY_COLLAPSED: 'word_history_collapsed_v10',
         API_EXPANDED: 'api_section_expanded_v5',
         WORD_CACHE_PREFIX: 'word_cache_v5_', // 旧版 HTML 缓存仅用于兼容读取
         STRUCTURED_CACHE_PREFIX: 'word_cache_v10_',
@@ -2068,11 +2100,13 @@
 
     let abortController = null;
     let searchHistory = [];
+    let historyCollapsed = true;
     let navStack = [];        // [{word, html}] 导航历史栈
     let navIndex = -1;        // 当前位置指针
     let isManualSearch = true; // 区分手动搜索 vs 结果区引申查询
     let requestGeneration = 0;
     let currentResultWord = '';
+    let activeQueryWord = '';
     let favoriteEntries = Object.create(null);
     let vocabView = 'cached';
     let readingScaleIndex = 2;
@@ -2111,6 +2145,40 @@
     function initQuickSearchJump() {
         const search = document.querySelector('.search-surface');
         const buttons = document.querySelectorAll('.quick-search-jump');
+        buttons.forEach(button => {
+            let pressTimer;
+            let hideTimer;
+            let startX;
+            let startY;
+            button.addEventListener('pointerdown', event => {
+                if (event.pointerType === 'mouse') return;
+                clearTimeout(hideTimer);
+                delete button.dataset.longPressed;
+                button.classList.remove('show-tooltip');
+                startX = event.clientX;
+                startY = event.clientY;
+                pressTimer = setTimeout(() => {
+                    button.dataset.longPressed = 'true';
+                    button.classList.add('show-tooltip');
+                }, 500);
+            });
+            button.addEventListener('pointermove', event => {
+                if (Math.abs(event.clientX - startX) > 10 || Math.abs(event.clientY - startY) > 10) clearTimeout(pressTimer);
+            });
+            const endPress = () => {
+                clearTimeout(pressTimer);
+                if (button.classList.contains('show-tooltip')) {
+                    hideTimer = setTimeout(() => button.classList.remove('show-tooltip'), 1600);
+                }
+            };
+            button.addEventListener('pointerup', endPress);
+            button.addEventListener('pointercancel', () => {
+                clearTimeout(pressTimer);
+                delete button.dataset.longPressed;
+                button.classList.remove('show-tooltip');
+            });
+            button.addEventListener('contextmenu', event => event.preventDefault());
+        });
         const update = () => {
             const visible = search.getBoundingClientRect().bottom < 16;
             buttons.forEach(button => {
@@ -2122,6 +2190,12 @@
         new IntersectionObserver(update, { rootMargin: '-16px 0px 0px 0px', threshold: 0 }).observe(search);
         window.addEventListener('resize', update);
         update();
+    }
+
+    function consumeQuickActionLongPress(button) {
+        if (button.dataset.longPressed !== 'true') return false;
+        delete button.dataset.longPressed;
+        return true;
     }
 
     function jumpToSearch() {
@@ -2877,6 +2951,7 @@
             makeWordsClickable(document.getElementById('resultContent'));
             buildTOC();
             hideStatus();
+            activeQueryWord = '';
             currentResultWord = entry.word;
             updateFavoriteButton();
         } else {
@@ -3022,7 +3097,15 @@
             const stored = localStorage.getItem(STORAGE_KEYS.HISTORY);
             if (stored) searchHistory = JSON.parse(stored);
             if (!Array.isArray(searchHistory)) searchHistory = [];
+            historyCollapsed = localStorage.getItem(STORAGE_KEYS.HISTORY_COLLAPSED) !== 'false';
         } catch { searchHistory = []; }
+        renderHistory();
+    }
+
+    function toggleHistoryCollapse() {
+        historyCollapsed = !historyCollapsed;
+        try { localStorage.setItem(STORAGE_KEYS.HISTORY_COLLAPSED, String(historyCollapsed)); }
+        catch { /* 当前页面仍可折叠 */ }
         renderHistory();
     }
 
@@ -3103,6 +3186,7 @@
         // 重置 UI：清空结果区、隐藏历史区、更新导航按钮
         document.getElementById('result').style.display = 'none';
         document.getElementById('resultContent').innerHTML = '';
+        activeQueryWord = '';
         currentResultWord = '';
         updateFavoriteButton();
         clearResultTOC();
@@ -3129,19 +3213,17 @@
             return;
         }
         historySection.style.display = 'block';
+        historySection.classList[historyCollapsed ? 'add' : 'remove']('collapsed');
+        historyList.hidden = historyCollapsed;
+        document.getElementById('historyToggle').setAttribute('aria-expanded', String(!historyCollapsed));
+        document.getElementById('historyCount').textContent = `${searchHistory.length} 条`;
         historyList.innerHTML = '';
+        if (historyCollapsed) return;
         searchHistory.forEach((word, index) => {
             const span = document.createElement('span');
             span.className = 'history-item';
             span.style.animationDelay = `${Math.min(index, 7) * 0.035}s`;
-            const isCached = hasCachedWord(word);
             span.textContent = word;
-            if (isCached) {
-                const icon = document.createElement('span');
-                icon.className = 'cache-icon';
-                icon.textContent = '⚡';
-                span.appendChild(icon);
-            }
             span.onclick = () => {
                 document.getElementById('wordInput').value = word;
                 isManualSearch = true;  // 从历史记录选择 = 手动搜索，重置导航链
@@ -3430,10 +3512,17 @@
     function updateFavoriteButton() {
         const button = document.getElementById('favoriteBtn');
         button.style.display = currentResultWord ? '' : 'none';
-        if (!currentResultWord) return;
-        const saved = hasFavorite(currentResultWord);
-        button.textContent = saved ? '★ 已收藏' : '☆ 收藏';
-        button.setAttribute('aria-pressed', String(saved));
+        if (currentResultWord) {
+            const saved = hasFavorite(currentResultWord);
+            button.textContent = saved ? '★ 已收藏' : '☆ 收藏';
+            button.setAttribute('aria-pressed', String(saved));
+        }
+        const quickButton = document.getElementById('quickFavorite');
+        const word = activeQueryWord || currentResultWord;
+        const saved = !!word && hasFavorite(word);
+        quickButton.setAttribute('aria-pressed', String(saved));
+        quickButton.setAttribute('aria-label', `${saved ? '取消收藏' : '收藏'}${word || '当前词条'}`);
+        quickButton.setAttribute('data-tooltip', saved ? '取消收藏' : '收藏当前词条');
     }
 
     function toggleFavoriteWord(word) {
@@ -3448,6 +3537,15 @@
 
     function toggleCurrentFavorite() {
         toggleFavoriteWord(currentResultWord);
+    }
+
+    function toggleQuickFavorite() {
+        const word = activeQueryWord || currentResultWord;
+        if (!word) {
+            showStatus('请先查询一个词条', 'error');
+            return;
+        }
+        toggleFavoriteWord(word);
     }
 
     function markReview(word, remembered) {
@@ -3661,6 +3759,8 @@
     // ======== 核心：边接收边显示正文 ========
     async function analyzeWord(retryCount = 0) {
         const requestId = cancelActiveRequest();
+        activeQueryWord = '';
+        updateFavoriteButton();
         const apiKey = getApiKey();
         const rawWord = document.getElementById('wordInput').value;
         const searchBtn = document.getElementById('searchBtn');
@@ -3701,6 +3801,8 @@
             return;
         }
 
+        activeQueryWord = word;
+        updateFavoriteButton();
         const controller = new AbortController();
         abortController = controller;
         searchBtn.disabled = true;
@@ -3854,6 +3956,8 @@
             if (requestId === requestGeneration) {
                 searchBtn.disabled = false;
                 if (abortController === controller) abortController = null;
+                activeQueryWord = '';
+                updateFavoriteButton();
             }
         }
     }
