@@ -1,27 +1,14 @@
-# Lexicon Studio
+# Lexicon Studio · GitHub Pages 上线仓库
 
-多彩词汇解析 v10.5 的 GitHub Pages 上线文件夹。网站入口是仓库根目录的 `index.html`；本文件夹只保留这一个 HTML 文件。
+这是正式网站的上线文件夹，对应 GitHub 仓库 `AndrewYuZhenYu/Lexicon_Studio`。GitHub Pages 使用仓库根目录的 `index.html` 作为首页。日常开发在 `/Users/andrewyu/WebstormProjects/dictionary_API` 进行。
 
-## 部署到 GitHub Pages
+截至 2026-11-26，本文件夹中的 `index.html` 仍是单独的 v10.5 查词页。带左侧单词表的新双栏版已经打包在 `/Users/andrewyu/WebstormProjects/dictionary_API/site_workspace/dist`，尚未复制到本仓库或推送 GitHub。
 
-1. 将本文件夹作为 Git 仓库上传到 GitHub。
-2. 在仓库 **Settings → Pages** 中选择 **Deploy from a branch**，分支选 `main`，目录选 `/ (root)`。
-3. 等待 GitHub Pages 发布，打开它给出的站点地址。
+## 上线双栏版
 
-页面的 CSS、应用逻辑和图标都在 `index.html`；Firebase SDK 从官方 CDN 加载，不需要构建步骤或安装依赖。
+1. 先把本文件夹现有的 `index.html` 复制到文件夹外备份。
+2. 打开上述 `site_workspace/dist`，**复制里面的全部内容**到本文件夹根目录，同名文件选择替换。不要只复制 `index.html`，也不要把整个 `dist` 文件夹套进来。`vendor` 文件夹及各个 JS 文件都必须一起复制。
+3. 在本仓库检查改动，提交并推送到 `main`。GitHub Pages 若仍设置为 `main` 分支的 `/ (root)`，会自动更新原网址；可在仓库的 **Actions** 或 **Settings → Pages** 查看部署结果。
+4. 打开原网址检查左侧词表和右侧查词。登录原有 Firebase 账号后，词表、词条修改与标记、收藏、查询历史和解析缓存会从云端恢复。
 
-## v10.5 使用说明
-
-在 iPad Safari 中复制单词或短语，切回网站并点「粘贴并查询」。Safari 可能显示系统粘贴提示；选择「粘贴」后，页面会自动填入并查询。若取消粘贴、剪贴板为空或浏览器不支持读取，原输入保持不变，也可以长按输入框手动粘贴。
-
-阅读结果时，左下角有三个浅色半透明图标：橙黄色星标收藏当前词条，绿色图标粘贴并查询，蓝色图标返回搜索栏。鼠标悬停或触屏长按会显示文字提示。最近查询默认折叠，可点击标题展开，并记住折叠状态。顶部白色词卡仅在鼠标移到词卡本身时抬升；三个主题标签有悬停反馈，点击只显示涟漪，不改变查询内容。
-
-顶部「登录同步」可通过 Firebase 邮箱和密码注册或登录。首次登录会合并当前浏览器的本地查词、解析缓存与收藏；之后同一账号在不同设备同步查词历史、解析正文、收藏和复习进度。退出登录会从当前设备移除已同步的本机数据，云端保留。已同步的解析可在新设备上直接打开。
-
-## API 使用说明
-
-生成尚无缓存的新解析时，使用者须在该设备输入自己的 DeepSeek API Key；读取已同步的解析不需要密钥。密钥只保存在当前标签页的 `sessionStorage` 中；请不要把密钥写入 `index.html` 或提交到 Git 仓库。GitHub Pages 只能托管静态文件，不能运行原开发项目中的 `server.js` 本地代理。在 Pages 上，页面会从浏览器直连 DeepSeek；如果浏览器或网络阻止跨域请求，查询会失败，需要另外部署可供此站点访问的 API 代理。页面静态界面仍可正常加载。
-
-## 更新约定
-
-本目录是“上线文件夹”。日常开发继续在原项目 `/Users/andrewyu/WebstormProjects/dictionary_API` 中进行；只有确认上线后，才把获准发布的版本复制到这里并命名为 `index.html`。
+GitHub Pages 只托管静态文件，不运行开发项目中的 `server.js`。生成新解析仍需使用者在网页中输入自己的 DeepSeek API Key；密钥不会上传到 Firebase，也不要写进仓库。换网址后需要重新输入一次。
