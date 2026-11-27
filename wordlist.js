@@ -286,27 +286,35 @@
         return entries;
     }
 
-    function exportRows(entries, favorites = {}) {
-        return [['单词', '释义/备注', '分组', '已标记', '已收藏'], ...entries.map(entry => [
-            entry.word, entry.note || '', entry.group || '', entry.marked ? '是' : '否',
-            Object.prototype.hasOwnProperty.call(favorites, entry.word.toLocaleLowerCase()) ? '是' : '否'
-        ])];
+    function exportRows(entries, favorites = {}, options = {}) {
+        const history = !!options.includeVocabularyHistory;
+        const headings = ['单词', '释义/备注', '分组', '已标记', '已收藏'];
+        if (history) headings.push('首次加入时间', '来源词表');
+        const recordedAt = value => Number.isFinite(value) && value > 0
+            ? new Date(value).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        return [headings, ...entries.map(entry => {
+            const row = [entry.word, entry.note || '', entry.group || '', entry.marked ? '是' : '否',
+                Object.prototype.hasOwnProperty.call(favorites, entry.word.toLocaleLowerCase()) ? '是' : '否'];
+            if (history) row.push(recordedAt(entry.savedAt || entry.createdAt),
+                (Array.isArray(entry.sources) ? entry.sources : []).map(source => source?.listName || '').filter(Boolean).join('、'));
+            return row;
+        })];
     }
 
-    function exportCsv(entries, favorites) {
+    function exportCsv(entries, favorites, options) {
         const csvCell = value => {
             let text = String(value ?? '');
             if (/^[\s\t]*[=+\-@]/.test(text)) text = `'${text}`;
             return `"${text.replace(/"/g, '""')}"`;
         };
-        return '\uFEFF' + exportRows(entries, favorites).map(row => row.map(csvCell).join(',')).join('\r\n');
+        return '\uFEFF' + exportRows(entries, favorites, options).map(row => row.map(csvCell).join(',')).join('\r\n');
     }
 
-    function exportXlsx(entries, favorites) {
+    function exportXlsx(entries, favorites, options) {
         if (!globalThis.fflate?.zipSync) throw new Error('Excel 导出器未加载');
         const escape = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-        const rows = exportRows(entries, favorites);
+        const rows = exportRows(entries, favorites, options);
         const letter = index => String.fromCharCode(65 + index);
         const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
             `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>` +

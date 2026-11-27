@@ -1,4 +1,4 @@
-// Companion for dictionary_workspace.html. The original v10.5 page is not changed.
+// Companion for dictionary_workspace.html. The original v10.5 page remains available.
 (() => {
     'use strict';
     const CHANNEL = 'dictionary-workspace-v1';

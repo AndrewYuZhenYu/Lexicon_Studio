@@ -42,15 +42,15 @@
         .workspace[data-view="list"] .divider, .workspace[data-view="dictionary"] .divider { opacity: 0; pointer-events: none; }
         .workspace[data-view="list"] .dictionary, .workspace[data-view="dictionary"] .library { opacity: 0; pointer-events: none; }
         .library { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--canvas); box-shadow: 2px 0 20px #1f29370a; z-index: 1; transition: opacity .24s ease; }
-        .library-top, .controls { flex-shrink: 0; }
+        .library-top, .controls, .controls-details { flex-shrink: 0; }
         .library-top { padding: 18px 24px 17px; border-bottom: 1px solid var(--line); background: var(--surface); transition: padding .32s cubic-bezier(.2,.7,.2,1); }
         .header-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .header-collapse { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 10px; color: var(--muted); font-size: 13px; white-space: nowrap; }
         .library.compact .library-top { padding: 11px 20px; }
         .import-details, .controls-details { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .34s cubic-bezier(.2,.7,.2,1), opacity .25s ease; }
         .import-details-inner, .controls-details-inner { min-height: 0; overflow: hidden; }
-        .library.compact .import-details, .controls.compact .controls-details { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
-        .library.compact .import-details, .controls.compact .controls-details { visibility: hidden; transition: grid-template-rows .34s cubic-bezier(.2,.7,.2,1), opacity .25s ease, visibility 0s .34s; }
+        .library.compact .import-details, .controls.compact + .controls-details { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+        .library.compact .import-details, .controls.compact + .controls-details { visibility: hidden; transition: grid-template-rows .34s cubic-bezier(.2,.7,.2,1), opacity .25s ease, visibility 0s .34s; }
         .library-subtitle { margin: 3px 0 0; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .11em; }
         .lead { margin: 10px 0 21px; color: var(--muted); font-size: 14px; line-height: 1.6; }
         .import-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -63,8 +63,11 @@
         .file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
         .drop-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
         .library.dragging { outline: 3px dashed var(--blue); outline-offset: -8px; }
-        .controls { padding: 13px 20px 12px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.78); transition: padding .32s cubic-bezier(.2,.7,.2,1); }
+        .controls { position: sticky; top: 8px; z-index: 6; padding: 13px 20px 12px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.78); transition: padding .32s cubic-bezier(.2,.7,.2,1); }
         .controls.compact { padding: 9px 16px; }
+        .controls-details { margin: 0 18px 14px; transition: grid-template-rows .34s cubic-bezier(.2,.7,.2,1), opacity .25s ease, margin-bottom .34s ease; }
+        .controls.compact + .controls-details { margin-bottom: 0; }
+        .controls-details-card { padding: 16px 18px; }
         .management-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
         .management-row button { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 650; }
         .management-row button:disabled { opacity: .45; cursor: default; }
@@ -92,6 +95,8 @@
         .sort-row { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
         .sort-row label { color: var(--muted); font-size: 13px; font-weight: 650; white-space: nowrap; }
         .sort-row select { flex: 1; height: 39px; }
+        .shuffle-button { flex: none; height: 39px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 650; white-space: nowrap; }
+        .shuffle-button:hover { background: var(--canvas); }
         .filter-row { display: flex; gap: 7px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
         .filter { border: 0; border-radius: 20px; padding: 7px 12px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 650; }
         .filter:hover { background: #f1f4f9; }
@@ -179,7 +184,7 @@
         .modebar button[aria-pressed="true"] { box-shadow: none; }
         .workspace { background: var(--canvas); }
         .library { background: radial-gradient(circle at 30% 5%, #3469e90b, transparent 45%), var(--canvas); box-shadow: none; }
-        .library-top, .controls, .entries { border: 1px solid var(--line); border-radius: 24px; background: var(--surface); box-shadow: 0 12px 30px #1f315512; }
+        .library-top, .controls, .controls-details-card, .entries { border: 1px solid var(--line); border-radius: 24px; background: var(--surface); box-shadow: 0 12px 30px #1f315512; }
         .library-top { margin: 18px 18px 14px; padding: 23px 24px 21px; }
         .library.compact .library-top { padding: 14px 20px; }
         .controls { margin: 0 18px 14px; padding: 16px 18px; }
@@ -232,7 +237,7 @@
         .row-vocab-action.added { color: var(--muted); }
         .row-vocab-action.record { width: auto; height: auto; padding: 7px 8px; border: 1px solid #bfd1ff; border-radius: 9px; background: var(--surface); font-size: 11px; font-weight: 750; }
         .entry-select { flex: none; width: 18px; height: 18px; margin-left: 11px; accent-color: var(--blue); cursor: pointer; }
-        .vocab-batch-bar { position: sticky; top: 0; z-index: 4; display: flex; flex: none; align-items: center; gap: 10px; margin: 0 18px 12px; padding: 10px 14px; border: 1px solid #cddcff; border-radius: 14px; background: var(--blue-soft); box-shadow: 0 5px 15px #1f315514; }
+        .vocab-batch-bar { position: sticky; top: calc(16px + var(--controls-bar-height, 70px)); z-index: 4; display: flex; flex: none; align-items: center; gap: 10px; margin: 0 18px 12px; padding: 10px 14px; border: 1px solid #cddcff; border-radius: 14px; background: var(--blue-soft); box-shadow: 0 5px 15px #1f315514; }
         .vocab-batch-bar[hidden], .batch-controls[hidden] { display: none; }
         .vocab-batch-bar button { flex: none; padding: 7px 10px; border: 1px solid #bfd1ff; border-radius: 9px; background: var(--surface); color: var(--blue); font-size: 12px; font-weight: 700; }
         .vocab-batch-bar button:disabled { opacity: .45; cursor: default; }
@@ -255,7 +260,7 @@
         .record-details strong { color: var(--ink); white-space: nowrap; }
         .record-details ul { margin: 8px 0 0; padding-left: 20px; }
         .record-details li { margin: 5px 0; }
-        :root[data-theme="dark"] .modebar, :root[data-theme="dark"] .library-top, :root[data-theme="dark"] .controls, :root[data-theme="dark"] .entries { background: var(--surface); }
+        :root[data-theme="dark"] .modebar, :root[data-theme="dark"] .library-top, :root[data-theme="dark"] .controls, :root[data-theme="dark"] .controls-details-card, :root[data-theme="dark"] .entries { background: var(--surface); }
         :root[data-theme="dark"] .library { background: radial-gradient(circle at 30% 5%, #83a9ff0b, transparent 45%), var(--canvas); }
         :root[data-theme="dark"] .entry, :root[data-theme="dark"] .search-input { background: #151f30; }
         :root[data-theme="dark"] .entry.active { border-color: #355184; }
@@ -275,6 +280,7 @@
             .workspace[data-view="list"] .dictionary, .workspace[data-view="dictionary"] .library { flex: 0 0 0; opacity: 0; pointer-events: none; }
             .library-top { margin: 10px 10px 8px; padding: 18px; }
             .controls { margin: 0 10px 8px; }
+            .controls-details { margin-inline: 10px; margin-bottom: 8px; }
             .entries, .workspace[data-view="list"] .entries { margin: 0 10px 10px; padding: 10px; }
             .vocab-batch-bar { margin: 0 10px 8px; }
         }
@@ -306,7 +312,7 @@
                 </g>
             </svg>
         </span>
-        <span class="brand-copy"><h1>多彩词汇</h1><span>Lexicon Studio <i>·</i> 10.5</span></span>
+        <span class="brand-copy"><h1>多彩词汇</h1><span>Lexicon Studio <i>·</i> 11</span></span>
         <span class="cloud-status" id="cloudStatus" role="status" aria-live="polite">登录后同步词表</span>
         <button type="button" data-view="list" aria-pressed="false">仅词表</button>
         <button type="button" data-view="split" aria-pressed="true">双栏</button>
@@ -331,7 +337,7 @@
                 </div>
                 </div>
             </header>
-            <div class="controls">
+            <div class="controls" id="controlsBar">
                 <div class="list-picker">
                     <input class="search-input" id="filterInput" type="search" placeholder="筛选当前词表…" aria-label="筛选词条">
                     <button class="list-quick-button" id="listQuickToggle" type="button" aria-label="切换或重命名词表" aria-expanded="false" aria-controls="listPopover">词表 ▾</button>
@@ -351,7 +357,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="controls-details" id="controlsDetails"><div class="controls-details-inner">
+            </div>
+            <div class="controls-details" id="controlsDetails"><div class="controls-details-inner"><div class="controls-details-card">
                 <div class="management-row">
                     <button id="addWordButton" type="button" aria-controls="addForm" aria-expanded="false">＋ 添加词条</button>
                     <button id="exportCsvButton" type="button">导出 CSV</button>
@@ -373,7 +380,9 @@
                         <option value="reverse">导入倒序</option>
                         <option value="az">词条正序 A–Z</option>
                         <option value="za">词条倒序 Z–A</option>
+                        <option value="random">乱序（刷新重排）</option>
                     </select>
+                    <button class="shuffle-button" id="shuffleButton" type="button" title="每次点击重新乱序；刷新页面也会重新打乱">↝ 乱序</button>
                 </div>
                 <div class="filter-row" role="group" aria-label="词条筛选">
                     <button class="filter" type="button" data-filter="all" aria-pressed="true">全部</button>
@@ -381,10 +390,10 @@
                     <button class="filter" type="button" data-filter="marked" aria-pressed="false">已标记</button>
                     <span class="count" id="count">0 个词条</span>
                 </div>
-                </div></div>
-            </div>
+                </div></div></div>
             <div class="vocab-batch-bar" id="vocabBatchBar" hidden>
                 <button type="button" id="batchModeToggle">批量管理</button>
+                <button type="button" id="vocabExportButton" title="导出生词表，包含加入时间与来源">导出 CSV</button>
                 <div class="batch-controls" id="batchControls" hidden>
                     <label><input type="checkbox" id="batchSelectAll"> 全选当前结果</label>
                     <span id="batchCount">已选 0 个</span>
@@ -396,7 +405,7 @@
         </section>
         <div class="divider" id="divider" role="separator" aria-label="调整左右宽度" aria-orientation="vertical" aria-controls="library dictionaryPane" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40" tabindex="0"></div>
         <section class="dictionary" id="dictionaryPane" aria-label="词汇解析">
-            <iframe id="dictionaryFrame" title="多彩词汇解析 v10.5"></iframe>
+            <iframe id="dictionaryFrame" title="多彩词汇解析 v11"></iframe>
         </section>
     </main>
     <div class="action-menu" id="actionMenu" role="menu" aria-label="词条操作">
@@ -447,6 +456,7 @@
         let saveQueue = Promise.resolve(true);
         let visibleRows = [], renderedRows = 0, lastRenderedGroup = null;
         let vocabularyKeys = new Set();
+        const shuffleRanks = new Map();
         let loadObserver;
         const newId = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -551,7 +561,7 @@
             } catch { notify('已保存的单词表无法读取'); }
             if (ensureVocabularyList() || migrated) await save(false);
             const sort = localStorage.getItem(SORT_KEY);
-            if (['original', 'reverse', 'az', 'za'].includes(sort)) state.sort = sort;
+            if (['original', 'reverse', 'az', 'za', 'random'].includes(sort)) state.sort = sort;
             const view = localStorage.getItem(VIEW_KEY);
             if (['split', 'list', 'dictionary'].includes(view)) state.view = view;
             const savedWidth = parseFloat(localStorage.getItem(WIDTH_KEY));
@@ -604,6 +614,13 @@
             $('controlsToggle').title = collapsed ? '展开筛选与管理' : '收起筛选与管理';
             $('controlsDetails').inert = collapsed;
             localStorage.setItem(CONTROLS_KEY, String(collapsed));
+        }
+        function observeStickyControls() {
+            const controls = $('controlsBar');
+            const updateHeight = () => $('library').style.setProperty('--controls-bar-height', `${controls.getBoundingClientRect().height}px`);
+            if (typeof ResizeObserver === 'function') new ResizeObserver(updateHeight).observe(controls);
+            else window.addEventListener('resize', updateHeight);
+            updateHeight();
         }
         function setListPopover(open) {
             $('listPopover').classList.toggle('open', open);
@@ -678,8 +695,7 @@
             const normalized = word.trim();
             if (!normalized || normalized.length > 200) { notify('请输入不超过 200 字的词条'); return false; }
             const list = ensureList();
-            if (isVocabularyList(list)) return addToVocabulary({ word: normalized, note: note.trim().slice(0, 300) }, null,
-                group === '右侧收藏' ? '右侧收藏' : '手动添加');
+            if (isVocabularyList(list)) return addToVocabulary({ word: normalized, note: note.trim().slice(0, 300) });
             if (list.entries.some(entry => favoriteKey(entry.word) === favoriteKey(normalized))) {
                 notify('当前词表里已有这个词条'); return false;
             }
@@ -688,13 +704,6 @@
             save(); refreshPicker(); render(); requestFavorites();
             return true;
         }
-        function addFromRight(word) {
-            if (!word || word.length > 200) return;
-            if (currentList()?.entries.some(entry => favoriteKey(entry.word) === favoriteKey(word))) return;
-            const special = isVocabularyList(currentList());
-            if (addEntry(word, '', '右侧收藏') && !special) notify(`已将 ${word} 加入左侧词表`);
-        }
-
         function refreshPicker() {
             const picker = $('listSelect');
             picker.replaceChildren();
@@ -891,6 +900,20 @@
             } else container.append(fragment);
         }
 
+        function randomRanksFor(list) {
+            let ranks = shuffleRanks.get(list.id);
+            if (!ranks || ranks.size !== list.entries.length || list.entries.some(entry => !ranks.has(entry.id))) {
+                const ids = list.entries.map(entry => entry.id);
+                for (let index = ids.length - 1; index > 0; index--) {
+                    const swap = Math.floor(Math.random() * (index + 1));
+                    [ids[index], ids[swap]] = [ids[swap], ids[index]];
+                }
+                ranks = new Map(ids.map((id, index) => [id, index]));
+                shuffleRanks.set(list.id, ranks);
+            }
+            return ranks;
+        }
+
         function render(reset = false) {
             const list = currentList();
             if (!isVocabularyList(list)) {
@@ -916,8 +939,14 @@
             $('listCount').textContent = `${list.entries.length} 个词条`;
             const query = $('filterInput').value.trim().toLocaleLowerCase();
             const saved = favorites();
-            const rows = list.entries.map((entry, index) => ({ entry, index }));
+            let rows = list.entries.map((entry, index) => ({ entry, index }));
             if (state.sort === 'reverse') rows.reverse();
+            if (state.sort === 'random') {
+                const ranks = randomRanksFor(list);
+                const randomized = new Array(rows.length);
+                for (const row of rows) randomized[ranks.get(row.entry.id)] = row;
+                rows = randomized;
+            }
             if (state.sort === 'az' || state.sort === 'za') {
                 const collator = new Intl.Collator(['zh-Hans-CN', 'en'], { numeric: true, sensitivity: 'base' });
                 rows.sort((a, b) => (state.sort === 'az' ? 1 : -1) * collator.compare(a.entry.word, b.entry.word));
@@ -937,6 +966,12 @@
             }
             $('count').textContent = `${visibleRows.length} / ${list.entries.length} 个词条`;
             updateBatchBar();
+        }
+        function showFirstVisibleEntry() {
+            const library = $('library');
+            const controlsHeight = $('controlsBar').getBoundingClientRect().height;
+            const offset = $('entries').getBoundingClientRect().top - library.getBoundingClientRect().top - controlsHeight - 16;
+            library.scrollTop += offset;
         }
 
         function frameWindow() {
@@ -1084,8 +1119,9 @@
             const list = currentList();
             if (!list) { notify('请先创建或导入词表'); return; }
             try {
-                const data = type === 'csv' ? WordList.exportCsv(list.entries, favorites())
-                    : WordList.exportXlsx(list.entries, favorites());
+                const options = { includeVocabularyHistory: isVocabularyList(list) };
+                const data = type === 'csv' ? WordList.exportCsv(list.entries, favorites(), options)
+                    : WordList.exportXlsx(list.entries, favorites(), options);
                 const mime = type === 'csv' ? 'text/csv;charset=utf-8'
                     : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
                 const url = URL.createObjectURL(new Blob([data], { type: mime }));
@@ -1186,6 +1222,7 @@
             });
             $('exportCsvButton').addEventListener('click', () => downloadExport('csv'));
             $('exportXlsxButton').addEventListener('click', () => downloadExport('xlsx'));
+            $('vocabExportButton').addEventListener('click', () => downloadExport('csv'));
             $('backupArchiveButton').addEventListener('click', backupArchive);
             $('restoreArchiveButton').addEventListener('click', () => $('archiveInput').click());
             $('archiveInput').addEventListener('change', event => void restoreArchive(event.target.files[0]));
@@ -1225,6 +1262,7 @@
             $('filterInput').addEventListener('input', () => {
                 if (state.batchSelecting) state.selectedVocabularyIds.clear();
                 render(true);
+                showFirstVisibleEntry();
             });
             $('batchModeToggle').addEventListener('click', () => {
                 state.batchSelecting = true; state.selectedVocabularyIds.clear(); render();
@@ -1243,14 +1281,24 @@
             $('sortSelect').addEventListener('change', event => {
                 state.sort = event.target.value;
                 localStorage.setItem(SORT_KEY, state.sort);
+                if (state.sort === 'random') shuffleRanks.delete(currentList()?.id);
                 render(true);
-                $('library').scrollTop = 0;
+                showFirstVisibleEntry();
+            });
+            $('shuffleButton').addEventListener('click', () => {
+                state.sort = 'random';
+                localStorage.setItem(SORT_KEY, state.sort);
+                shuffleRanks.delete(currentList()?.id);
+                $('sortSelect').value = state.sort;
+                render(true);
+                showFirstVisibleEntry();
             });
             document.querySelectorAll('.filter').forEach(button => button.addEventListener('click', () => {
                 state.filter = button.dataset.filter;
                 if (state.batchSelecting) state.selectedVocabularyIds.clear();
                 document.querySelectorAll('.filter').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
                 render(true);
+                showFirstVisibleEntry();
             }));
             $('entries').addEventListener('click', event => {
                 const row = event.target.closest('.entry');
@@ -1332,12 +1380,6 @@
                 if (event.key === 'color_theme_v5') document.documentElement.dataset.theme = event.newValue === 'dark' ? 'dark' : 'light';
                 if (fileMode || event.key !== 'word_favorites_v10') return;
                 render();
-                try {
-                    const word = frameWindow()?.document.getElementById('wordInput').value.trim();
-                    const before = JSON.parse(event.oldValue || '{}');
-                    const after = JSON.parse(event.newValue || '{}');
-                    if (word && !isFavorite(word, before) && isFavorite(word, after)) addFromRight(word);
-                } catch { /* Right pane may still be loading. */ }
             });
             window.addEventListener('message', event => {
                 if (!fileMode || event.source !== $('dictionaryFrame').contentWindow || event.data?.channel !== CHANNEL) return;
@@ -1362,7 +1404,6 @@
                     localStorage.setItem(FILE_FAVORITES_KEY, JSON.stringify(state.fileFavorites));
                     notify(message.saved ? `已收藏 ${message.word}` : `已取消收藏 ${message.word}`);
                     render();
-                    if (message.saved) addFromRight(message.word);
                 } else if (message.type === 'error') notify(message.text || '右侧操作失败');
             });
             $('dictionaryFrame').addEventListener('load', () => {
@@ -1485,6 +1526,7 @@
         setView(state.view);
         setHeaderCollapsed(state.headerCollapsed);
         setControlsCollapsed(state.controlsCollapsed);
+        observeStickyControls();
         setHideNotes(state.hideNotes);
         $('sortSelect').value = state.sort;
         $('addForm').inert = true;
